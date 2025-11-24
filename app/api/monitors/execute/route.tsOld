@@ -1,0 +1,45 @@
+// app/api/monitoring/execute/route.ts
+ 
+export const runtime = "nodejs";
+import { NextRequest, NextResponse } from 'next/server';
+import { getExecutor } from '@/lib/monitoring/MonitoringExecutor';
+import { initializeCheckers } from '@/lib/monitoring/checkers';
+
+// Initialize checkers on module load
+initializeCheckers();
+
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const mode = searchParams.get('mode') || 'due';
+
+    console.log(`🚀 Monitoring Execution - Mode: ${mode}`);
+
+    const executor = getExecutor();
+    let result;
+
+    if (mode === 'all') {
+      result = await executor.executeAllMonitors();
+    } else {
+      result = await executor.executeDueMonitors();
+    }
+
+    console.log(`✅ Executed: ${result.executed || result.total}, Successful: ${result.successful || 0}`);
+
+    return NextResponse.json({
+      success: true,
+      mode,
+      timestamp: new Date().toISOString(),
+      ...result
+    });
+
+  } catch (error: any) {
+    console.error('❌ Monitoring execution failed:', error);
+    
+    return NextResponse.json({
+      success: false,
+      error: error.message || 'Monitoring execution failed',
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
+  }
+}
