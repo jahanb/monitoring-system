@@ -22,7 +22,7 @@ export class PingChecker implements IChecker {
 
     try {
       const pingConfig = this.parsePingConfig(monitor);
-      
+
       if (!pingConfig.valid) {
         return {
           success: false,
@@ -36,8 +36,8 @@ export class PingChecker implements IChecker {
       console.log(`🏓 Pinging ${pingConfig.host}...`);
 
       const result = await this.executePing(
-        pingConfig.host, 
-        pingConfig.count, 
+        pingConfig.host,
+        pingConfig.count,
         pingConfig.timeout
       );
 
@@ -115,18 +115,18 @@ export class PingChecker implements IChecker {
 
   validate(monitor: Monitor): boolean | string {
     const ping = (monitor as any).ping_config;
-    
+
     if (!ping?.host && !monitor.monitor_instance) {
       return 'Host/IP address is required for ping monitoring';
     }
-    
+
     const host = ping?.host || monitor.monitor_instance;
-    
+
     // Basic validation for IP address or hostname
     if (!this.isValidHostOrIP(host)) {
       return 'Invalid host or IP address format';
     }
-    
+
     return true;
   }
 
@@ -204,8 +204,11 @@ export class PingChecker implements IChecker {
     // Packets: Sent = 4, Received = 4, Lost = 0 (0% loss)
     // Minimum = 1ms, Maximum = 3ms, Average = 2ms
 
-    const packetsMatch = output.match(/Sent = (\d+), Received = (\d+), Lost = (\d+)/);
-    const timesMatch = output.match(/Minimum = (\d+)ms, Maximum = (\d+)ms, Average = (\d+)ms/);
+    // const packetsMatch = output.match(/Sent = (\d+), Received = (\d+), Lost = (\d+)/);
+    //const timesMatch = output.match(/Minimum = (\d+)ms, Maximum = (\d+)ms, Average = (\d+)ms/);
+
+    const packetsMatch = output.match(/(?:Sent|Gesendet)\s*=\s*(\d+),\s*(?:Received|Empfangen)\s*=\s*(\d+),\s*(?:Lost|Verloren)\s*=\s*(\d+)/i);
+    const timesMatch = output.match(/Minimum\s*=\s*(\d+)ms.*Maximum\s*=\s*(\d+)ms.*(?:Average|Mittelwert)\s*=\s*(\d+)ms/i);
 
     if (!packetsMatch) {
       return {
@@ -226,7 +229,7 @@ export class PingChecker implements IChecker {
     const packetLoss = (lost / sent) * 100;
 
     let minTime = 0, maxTime = 0, avgTime = 0;
-    
+
     if (timesMatch && received > 0) {
       minTime = parseInt(timesMatch[1]);
       maxTime = parseInt(timesMatch[2]);
@@ -252,7 +255,7 @@ export class PingChecker implements IChecker {
     const packetsMatch = output.match(/(\d+) packets transmitted, (\d+) received/);
     const lossMatch = output.match(/(\d+\.?\d*)% packet loss/);
     const rttMatch = output.match(/rtt min\/avg\/max\/mdev = ([\d.]+)\/([\d.]+)\/([\d.]+)\/([\d.]+) ms/);
-    
+
     // Alternative format: round-trip min/avg/max = ...
     const rttAltMatch = output.match(/round-trip min\/avg\/max = ([\d.]+)\/([\d.]+)\/([\d.]+) ms/);
 
