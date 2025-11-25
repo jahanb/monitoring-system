@@ -27,16 +27,36 @@ export class AlertManager {
       const db = await getDatabase();
 
       // Get monitoring state from StateManager's collection
-      const state = await db.collection(Collections.MONITOR_STATES).findOne({
+      // Try both ObjectId and string formats for compatibility
+      let state = await db.collection(Collections.MONITOR_STATES).findOne({
         monitor_id: monitor._id
       });
 
+      // If not found, try string version
+      if (!state && monitor._id) {
+        state = await db.collection(Collections.MONITOR_STATES).findOne({
+          monitor_id: monitor._id.toString()
+        });
+      }
+
+      // If still not found, try as ObjectId if it's a string
+      if (!state && typeof monitor._id === 'string') {
+        try {
+          state = await db.collection(Collections.MONITOR_STATES).findOne({
+            monitor_id: new ObjectId(monitor._id)
+          });
+        } catch (e) {
+          // Not a valid ObjectId string
+        }
+      }
+
       if (!state) {
-        console.warn(`⚠️  No state found for monitor: ${monitor.monitor_name}`);
+        console.warn(`⚠️  No state found for monitor: ${monitor.monitor_name} (ID: ${monitor._id})`);
+        console.log(`   Available states:`, await db.collection(Collections.MONITOR_STATES).find({}).limit(5).toArray());
         return;
       }
 
-      console.log(`   State: consecutive_failures=${state.consecutive_failures}, consecutive_successes=${state.consecutive_successes}`);
+      console.log(`   State: consecutive_failures=${state.consecutive_failures || 0}, consecutive_successes=${state.consecutive_successes || 0}`);
 
       // Determine if this is a failure
       const isFailure = !result.success ||
@@ -59,9 +79,11 @@ export class AlertManager {
         console.log(`   ✅ Success for ${monitor.monitor_name}`);
 
         // Success - check if we should recover active alerts
-        const shouldRecover = state.consecutive_successes >= (monitor.reset_after_m_ok || 2);
+        const consecutiveSuccesses = state.consecutive_successes || 0;
+        const requiredSuccesses = monitor.reset_after_m_ok || 2;
+        const shouldRecover = consecutiveSuccesses >= requiredSuccesses;
 
-        console.log(`   Should recover? ${shouldRecover} (consecutive_successes=${state.consecutive_successes}, threshold=${monitor.reset_after_m_ok || 2})`);
+        console.log(`   Should recover? ${shouldRecover} (consecutive_successes=${consecutiveSuccesses}, threshold=${requiredSuccesses})`);
 
         if (shouldRecover) {
           await this.recoverActiveAlerts(monitor);
@@ -76,14 +98,18 @@ export class AlertManager {
    * Determine if an alert should be triggered
    */
   private shouldTriggerAlert(monitor: Monitor, state: any, status: string): boolean {
+    const consecutiveFailures = state.consecutive_failures || 0;
+
     // For alarms
     if (status === 'alarm') {
-      return state.consecutive_failures >= (monitor.consecutive_alarm || 3);
+      const threshold = monitor.consecutive_alarm || 3;
+      return consecutiveFailures >= threshold;
     }
 
     // For warnings
     if (status === 'warning') {
-      return state.consecutive_failures >= (monitor.consecutive_warning || 2);
+      const threshold = monitor.consecutive_warning || 2;
+      return consecutiveFailures >= threshold;
     }
 
     return false;
@@ -99,10 +125,19 @@ export class AlertManager {
       console.log(`🚨 Creating/updating alert for ${monitor.monitor_name}`);
 
       // Check if there's already an active alert for this monitor
-      const existingAlert = await db.collection(Collections.ALERTS).findOne({
+      // Try multiple ID formats for compatibility
+      let existingAlert = await db.collection(Collections.ALERTS).findOne({
         monitor_id: monitor._id?.toString(),
         status: { $in: ['active', 'acknowledged', 'in_recovery'] }
       });
+
+      // Try ObjectId format if string didn't work
+      if (!existingAlert && monitor._id) {
+        existingAlert = await db.collection(Collections.ALERTS).findOne({
+          monitor_id: monitor._id,
+          status: { $in: ['active', 'acknowledged', 'in_recovery'] }
+        });
+      }
 
       if (existingAlert) {
         console.log(`   📝 Updating existing alert ${existingAlert._id}`);
@@ -113,7 +148,7 @@ export class AlertManager {
           {
             $set: {
               current_value: result.value || 0,
-              consecutive_failures: state.consecutive_failures,
+              consecutive_failures: state.consecutive_failures || 0,
               message: result.message,
               metadata: result.metadata,
               last_updated: new Date()
@@ -135,7 +170,7 @@ export class AlertManager {
           triggered_at: new Date(),
           current_value: result.value || 0,
           threshold_value: this.getThresholdValue(monitor, result.status),
-          consecutive_failures: state.consecutive_failures,
+          consecutive_failures: state.consecutive_failures || 0,
           recovery_attempts: [],
           notifications_sent: [],
           message: result.message,
@@ -177,9 +212,15 @@ export class AlertManager {
     try {
       const db = await getDatabase();
 
+      console.log(`🔄 Attempting to recover alerts for ${monitor.monitor_name}`);
+
+      // Try both ID formats for update
       const result = await db.collection(Collections.ALERTS).updateMany(
         {
-          monitor_id: monitor._id?.toString(),
+          $or: [
+            { monitor_id: monitor._id?.toString() },
+            { monitor_id: monitor._id }
+          ],
           status: { $in: ['active', 'acknowledged', 'in_recovery'] }
         },
         {
@@ -195,14 +236,21 @@ export class AlertManager {
 
         // Send recovery notifications
         const alerts = await db.collection(Collections.ALERTS).find({
-          monitor_id: monitor._id?.toString(),
+          $or: [
+            { monitor_id: monitor._id?.toString() },
+            { monitor_id: monitor._id }
+          ],
           status: 'recovered',
           recovered_at: { $gte: new Date(Date.now() - 60000) } // Last minute
         }).toArray();
 
+        console.log(`   Found ${alerts.length} recently recovered alert(s) to notify`);
+
         for (const alert of alerts) {
           await this.sendRecoveryNotifications(monitor, alert);
         }
+      } else {
+        console.log(`   ℹ️  No active alerts found to recover for ${monitor.monitor_name}`);
       }
     } catch (error: any) {
       console.error(`❌ Failed to recover alerts:`, error);
@@ -281,7 +329,7 @@ export class AlertManager {
 
     for (const email of monitor.alarming_candidate || []) {
       try {
-        console.log(`📧 Sending recovery notification to ${email}`);
+        console.log(`   📧 Sending recovery notification to ${email}`);
 
         const notification: NotificationLog = {
           channel: 'email',
@@ -301,7 +349,7 @@ export class AlertManager {
         // });
 
       } catch (error: any) {
-        console.error(`Failed to send recovery notification to ${email}:`, error);
+        console.error(`   ❌ Failed to send recovery notification to ${email}:`, error);
       }
     }
 

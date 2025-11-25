@@ -12,13 +12,21 @@ import {
   CardContent,
   Chip,
   IconButton,
-  Stack
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Tooltip
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Refresh as RefreshIcon,
+  ContentCopy as DuplicateIcon,
+  PlayArrow as PlayIcon
 } from '@mui/icons-material';
 import MainLayout from '@/components/layout/MainLayout';
 import { useRouter } from 'next/navigation';
@@ -29,6 +37,13 @@ export default function MonitorsPage() {
   const [monitors, setMonitors] = useState<Monitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  
+  // Duplicate dialog state
+  const [duplicateDialog, setDuplicateDialog] = useState(false);
+  const [monitorToDuplicate, setMonitorToDuplicate] = useState<Monitor | null>(null);
+  const [duplicateName, setDuplicateName] = useState('');
+  const [duplicating, setDuplicating] = useState(false);
 
   const fetchMonitors = async () => {
     setLoading(true);
@@ -38,7 +53,8 @@ export default function MonitorsPage() {
       const data = await response.json();
       
       if (response.ok) {
-        setMonitors(data.data);
+        // Handle both possible response formats
+        setMonitors(data.data || data.monitors || []);
       } else {
         setError(data.error || 'Failed to fetch monitors');
       }
@@ -60,13 +76,121 @@ export default function MonitorsPage() {
       });
 
       if (response.ok) {
+        setSuccess('Monitor deleted successfully');
         fetchMonitors();
+        setTimeout(() => setSuccess(null), 3000);
       } else {
         const data = await response.json();
-        alert(data.error || 'Failed to delete monitor');
+        setError(data.error || 'Failed to delete monitor');
       }
     } catch (err: any) {
-      alert(err.message || 'Failed to delete monitor');
+      setError(err.message || 'Failed to delete monitor');
+    }
+  };
+
+  const handleDuplicateClick = (monitor: Monitor) => {
+    setMonitorToDuplicate(monitor);
+    setDuplicateName(`${monitor.monitor_name} (Copy)`);
+    setDuplicateDialog(true);
+  };
+
+  const handleDuplicate = async () => {
+    if (!monitorToDuplicate || !duplicateName.trim()) {
+      setError('Please enter a name for the duplicated monitor');
+      return;
+    }
+
+    setDuplicating(true);
+    
+    try {
+      // Create a copy of the monitor without _id and with new name
+      const duplicatedMonitor: any = {
+        ...monitorToDuplicate,
+        monitor_name: duplicateName.trim(),
+        // Remove fields that should be reset
+        _id: undefined,
+        created_at: undefined,
+        updated_at: undefined,
+        creation_date_time: undefined,
+        last_check_time: undefined,
+        last_check_status: undefined,
+        last_check_message: undefined,
+        last_check_value: undefined
+      };
+
+      // Remove undefined fields
+      Object.keys(duplicatedMonitor).forEach(key => {
+        if (duplicatedMonitor[key] === undefined) {
+          delete duplicatedMonitor[key];
+        }
+      });
+
+      const response = await fetch('/api/monitors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(duplicatedMonitor)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to duplicate monitor');
+      }
+
+      setSuccess(`Monitor duplicated successfully! Redirecting to edit...`);
+      setDuplicateDialog(false);
+      
+      // Get the new monitor ID from response
+      const newMonitorId = data.monitor?._id || data.data?._id || data.id;
+      
+      // Redirect to edit page after 1 second
+      setTimeout(() => {
+        if (newMonitorId) {
+          router.push(`/monitors/${newMonitorId}/edit`);
+        } else {
+          // If no ID, just refresh and close
+          fetchMonitors();
+        }
+      }, 1000);
+      
+    } catch (err: any) {
+      setError(err.message);
+      setDuplicating(false);
+    }
+  };
+
+  const handleExecuteNow = async (id: string, name: string) => {
+    try {
+      setSuccess(`Executing ${name}...`);
+      
+      const response = await fetch('/api/monitors/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ monitor_id: id })
+      });
+
+      if (!response.ok) throw new Error('Failed to execute monitor');
+      
+      const data = await response.json();
+      
+      if (data.result?.success) {
+        setSuccess(`${name} executed successfully - Status: ${data.result.status}`);
+      } else {
+        setError(`${name} failed - ${data.result?.message || 'Unknown error'}`);
+      }
+      
+      // Refresh monitors to show updated status
+      setTimeout(() => {
+        fetchMonitors();
+      }, 2000);
+      
+      setTimeout(() => {
+        setSuccess(null);
+        setError(null);
+      }, 5000);
+      
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
@@ -87,6 +211,10 @@ export default function MonitorsPage() {
   const getTypeColor = (type: string) => {
     const colors: Record<string, 'primary' | 'secondary' | 'success' | 'warning' | 'info'> = {
       url: 'primary',
+      api_post: 'primary',
+      ssh: 'secondary',
+      aws: 'warning',
+      ping: 'info',
       cpu: 'secondary',
       memory: 'warning',
       system_availability: 'success',
@@ -121,16 +249,22 @@ export default function MonitorsPage() {
           </Stack>
         </Box>
 
+        {/* Alerts */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+        {success && (
+          <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
+            {success}
+          </Alert>
+        )}
+
         {loading && (
           <Box display="flex" justifyContent="center" py={10}>
             <CircularProgress />
           </Box>
-        )}
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
         )}
 
         {!loading && !error && monitors.length === 0 && (
@@ -155,7 +289,7 @@ export default function MonitorsPage() {
           </Card>
         )}
 
-        {!loading && !error && monitors.length > 0 && (
+        {!loading && monitors.length > 0 && (
           <Stack spacing={2}>
             {monitors.map((monitor: any) => (
               <Card key={monitor._id}>
@@ -188,15 +322,27 @@ export default function MonitorsPage() {
                             size="small"
                           />
                         )}
+                        {monitor.last_check_status && (
+                          <Chip
+                            label={`Last: ${monitor.last_check_status}`}
+                            color={
+                              monitor.last_check_status === 'ok' ? 'success' :
+                              monitor.last_check_status === 'warning' ? 'warning' :
+                              monitor.last_check_status === 'alarm' ? 'error' : 'default'
+                            }
+                            size="small"
+                            variant="outlined"
+                          />
+                        )}
                       </Box>
 
                       <Typography variant="body2" color="textSecondary" paragraph>
-                        {monitor.description}
+                        {monitor.description || 'No description'}
                       </Typography>
 
                       <Box display="flex" gap={3} flexWrap="wrap">
                         <Typography variant="body2">
-                          <strong>Instance:</strong> {monitor.monitor_instance}
+                          <strong>Instance:</strong> {monitor.monitor_instance || 'N/A'}
                         </Typography>
                         <Typography variant="body2">
                           <strong>Owner:</strong> {monitor.business_owner}
@@ -204,29 +350,59 @@ export default function MonitorsPage() {
                         <Typography variant="body2">
                           <strong>Check Interval:</strong> {monitor.period_in_minute} min
                         </Typography>
-                        <Typography variant="body2">
-                          <strong>Created:</strong> {new Date(monitor.creation_date_time).toLocaleDateString()}
-                        </Typography>
+                        {monitor.creation_date_time && (
+                          <Typography variant="body2">
+                            <strong>Created:</strong> {new Date(monitor.creation_date_time).toLocaleDateString()}
+                          </Typography>
+                        )}
+                        {monitor.last_check_time && (
+                          <Typography variant="body2">
+                            <strong>Last Check:</strong> {new Date(monitor.last_check_time).toLocaleString()}
+                          </Typography>
+                        )}
                       </Box>
                     </Box>
 
                     <Box display="flex" gap={1}>
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={() => router.push(`/monitors/${monitor._id}/edit`)}
-                        title="Edit"
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleDelete(monitor._id)}
-                        title="Delete"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                      <Tooltip title="Execute Now">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => handleExecuteNow(monitor._id, monitor.monitor_name)}
+                        >
+                          <PlayIcon />
+                        </IconButton>
+                      </Tooltip>
+                      
+                      <Tooltip title="Duplicate">
+                        <IconButton
+                          size="small"
+                          color="info"
+                          onClick={() => handleDuplicateClick(monitor)}
+                        >
+                          <DuplicateIcon />
+                        </IconButton>
+                      </Tooltip>
+                      
+                      <Tooltip title="Edit">
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => router.push(`/monitors/${monitor._id}/edit`)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      
+                      <Tooltip title="Delete">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleDelete(monitor._id)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
                     </Box>
                   </Box>
                 </CardContent>
@@ -235,6 +411,76 @@ export default function MonitorsPage() {
           </Stack>
         )}
       </Box>
+
+      {/* Duplicate Dialog */}
+      <Dialog
+        open={duplicateDialog}
+        onClose={() => !duplicating && setDuplicateDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Duplicate Monitor</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Create a copy of <strong>{monitorToDuplicate?.monitor_name}</strong>
+            </Typography>
+            
+            <TextField
+              fullWidth
+              label="New Monitor Name"
+              value={duplicateName}
+              onChange={(e) => setDuplicateName(e.target.value)}
+              autoFocus
+              disabled={duplicating}
+              helperText="Enter a unique name for the duplicated monitor"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && !duplicating) {
+                  handleDuplicate();
+                }
+              }}
+            />
+
+            {monitorToDuplicate && (
+              <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                  Monitor Details:
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Type:</strong> {monitorToDuplicate.monitor_type}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Instance:</strong> {monitorToDuplicate.monitor_instance || 'N/A'}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Period:</strong> {monitorToDuplicate.period_in_minute} minutes
+                </Typography>
+              </Box>
+            )}
+
+            <Alert severity="info" sx={{ mt: 2 }}>
+              The duplicated monitor will have all the same settings but will be created as a new monitor.
+              You'll be redirected to edit it after creation.
+            </Alert>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setDuplicateDialog(false)}
+            disabled={duplicating}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDuplicate}
+            variant="contained"
+            disabled={duplicating || !duplicateName.trim()}
+            startIcon={duplicating ? <CircularProgress size={16} /> : <DuplicateIcon />}
+          >
+            {duplicating ? 'Duplicating...' : 'Duplicate & Edit'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </MainLayout>
   );
 }
