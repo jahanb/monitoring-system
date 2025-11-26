@@ -60,6 +60,13 @@ export class CheckerRegistry {
     } catch (error) {
       console.error('❌ Failed to load UrlChecker:', error);
     }
+    // Import and register all checkers
+    try {
+      const { LogChecker } = require('./checkers/LogChecker');
+      this.register(new LogChecker());
+    } catch (error) {
+      console.error('❌ Failed to load LogChecker:', error);
+    }
 
     try {
       const { ApiPostChecker } = require('./checkers/ApiPostChecker');

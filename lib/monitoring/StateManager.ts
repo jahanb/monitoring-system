@@ -4,6 +4,7 @@ import { Monitor } from '@/lib/models/Monitor';
 import { MonitorState, Alert } from '@/lib/models/TimeSeries';
 import { getDatabase, Collections } from '@/lib/db/mongodb';
 import { CheckResult } from './types';
+import { CheckerRegistry } from './types';
 
 export class StateManager {
   async updateState(monitor: Monitor, result: CheckResult): Promise<void> {

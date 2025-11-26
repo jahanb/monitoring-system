@@ -69,6 +69,9 @@ export function determineStatus(
  * Centralized registry for all monitor checkers
  */
 export class CheckerRegistry {
+  static getTypes() {
+    throw new Error('Method not implemented.');
+  }
   private static checkers: Map<string, IChecker> = new Map();
 
   /**

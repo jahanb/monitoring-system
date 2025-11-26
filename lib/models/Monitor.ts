@@ -6,9 +6,9 @@ export interface Monitor {
   creation_date_time: Date;
   created_by: string;
   business_owner: string;
-  alarming_candidate: string[];  // Array of recipients
   dependencies: string[];  // Related systems/apps
   description: string;
+  alarming_candidate?: string[] | AlarmingContact[];
   severity: 'low' | 'medium' | 'high' | 'critical';
   monitor_instance: string;  // URL, system name, or app name
   ssh_config?: SshConfig;
@@ -16,13 +16,13 @@ export interface Monitor {
   negative_pattern?: string;  // Pattern that should NOT appear
   positive_pattern?: string;  // Pattern that SHOULD appear
   //post body
-  post_body?: string; 
+  post_body?: string;
   // Thresholds
   low_value_threshold_warning?: number;
   high_value_threshold_warning?: number;
   low_value_threshold_alarm?: number;
   high_value_threshold_alarm?: number;
-  
+
 
   ping_config?: {
     host?: string;      // IP or hostname (optional if monitor_instance is used)
@@ -32,32 +32,38 @@ export interface Monitor {
   // Consecutive checks
   consecutive_warning: number;
   consecutive_alarm: number;
-  
+
   // URL specific
   status_code?: number[];  // Expected status codes (e.g., [200, 201])
-  
+
   // Timing
   period_in_minute: number;
   timeout_in_second: number;
-  
+
   // Recovery
   recovery_action?: string;  // Script name or action identifier
   alarm_after_n_failure: number;
   reset_after_m_ok: number;
-  
+
   // Maintenance
   maintenance_windows?: MaintenanceWindow[];
-  
+
   // Status
   active_disable: boolean;  // true = active, false = disabled
   running_stopped: boolean;  // true = running, false = stopped
-  
+
   // System fields
   last_check?: Date;
   last_status?: 'ok' | 'warning' | 'alarm';
   updated_at?: Date;
 }
 
+export interface AlarmingContact {
+  name: string;
+  email: string;
+  mobile?: string;
+  role?: string; // e.g., "Primary", "Secondary", "On-Call"
+}
 export interface MaintenanceWindow {
   start_date_time: Date;
   end_date_time: Date;
@@ -142,3 +148,41 @@ export const MonitorDefaults: Partial<Monitor> = {
   dependencies: [],
   alarming_candidate: []
 };
+
+/**
+ * Helper function to extract email addresses from alarming_candidate
+ */
+export function getAlarmingEmails(monitor: Monitor): string[] {
+  if (!monitor.alarming_candidate || monitor.alarming_candidate.length === 0) {
+    return [];
+  }
+
+  // Check if it's an array of strings (old format)
+  if (typeof monitor.alarming_candidate[0] === 'string') {
+    return monitor.alarming_candidate as string[];
+  }
+
+  // It's an array of AlarmingContact objects (new format)
+  return (monitor.alarming_candidate as AlarmingContact[])
+    .map(contact => contact.email)
+    .filter(email => email && email.trim().length > 0);
+}
+
+/**
+ * Helper function to extract mobile numbers from alarming_candidate
+ */
+export function getAlarmingMobiles(monitor: Monitor): string[] {
+  if (!monitor.alarming_candidate || monitor.alarming_candidate.length === 0) {
+    return [];
+  }
+
+  // Check if it's an array of strings (old format - no mobiles)
+  if (typeof monitor.alarming_candidate[0] === 'string') {
+    return [];
+  }
+
+  // It's an array of AlarmingContact objects (new format)
+  return (monitor.alarming_candidate as AlarmingContact[])
+    .map(contact => contact.mobile)
+    .filter(mobile => mobile && mobile.trim().length > 0) as string[];
+}

@@ -11,6 +11,7 @@ import pLimit from 'p-limit';
 
 // Import all checkers
 import { UrlChecker } from './checkers/UrlChecker';
+import { LogChecker } from './checkers/LogChecker';
 import { ApiPostChecker } from './checkers/ApiPostChecker';
 import { SshChecker } from './checkers/SshChecker';
 import { AwsChecker } from './checkers/AwsChecker';
@@ -43,7 +44,7 @@ export class MonitoringExecutor {
       CheckerRegistry.register(new SshChecker());
       CheckerRegistry.register(new AwsChecker());
       CheckerRegistry.register(new PingChecker());
-
+      CheckerRegistry.register(new LogChecker());
       MonitoringExecutor.checkersRegistered = true;
       logger.info(`✅ Registered ${CheckerRegistry.getCount()} checkers: ${CheckerRegistry.getRegisteredTypes().join(', ')}`);
     } catch (error) {

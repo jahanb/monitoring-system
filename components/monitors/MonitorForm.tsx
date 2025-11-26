@@ -86,6 +86,10 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
   }, [initialData]);
 
   const [alarmingInput, setAlarmingInput] = useState('');
+  const [alarmingEmailInput, setAlarmingEmailInput] = useState('');
+  const [alarmingNameInput, setAlarmingNameInput] = useState('');
+  const [alarmingMobileInput, setAlarmingMobileInput] = useState('');
+  const [alarmingRoleInput, setAlarmingRoleInput] = useState('');
   const [dependencyInput, setDependencyInput] = useState('');
   const [statusCodeInput, setStatusCodeInput] = useState('');
 
@@ -103,13 +107,28 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
   };
 
   const handleAddAlarmingCandidate = () => {
-    if (alarmingInput.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        alarming_candidate: [...(prev.alarming_candidate || []), alarmingInput.trim()]
-      }));
-      setAlarmingInput('');
+    if (!alarmingEmailInput.trim()) {
+      return;
     }
+    
+    // Create contact object
+    const contact = {
+      name: alarmingNameInput.trim() || alarmingEmailInput.trim().split('@')[0],
+      email: alarmingEmailInput.trim(),
+      mobile: alarmingMobileInput.trim() || undefined,
+      role: alarmingRoleInput.trim() || undefined
+    };
+    
+    setFormData(prev => ({
+      ...prev,
+      alarming_candidate: [...(prev.alarming_candidate || []), contact]
+    }));
+    
+    // Clear inputs
+    setAlarmingNameInput('');
+    setAlarmingEmailInput('');
+    setAlarmingMobileInput('');
+    setAlarmingRoleInput('');
   };
 
   const handleAddDependency = () => {
@@ -280,6 +299,7 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
                   <MenuItem value="ssh">SSH Remote Command</MenuItem>
                   <MenuItem value="aws">AWS CloudWatch</MenuItem>
                   <MenuItem value="ping">Ping / ICMP</MenuItem>
+                  <MenuItem value="log">Log File Analysis</MenuItem>
                   <MenuItem value="cpu">CPU Usage</MenuItem>
                   <MenuItem value="memory">Memory Usage</MenuItem>
                   <MenuItem value="disk">Disk Usage</MenuItem>
@@ -357,31 +377,118 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
           <Divider sx={{ mb: 3 }} />
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Alarming Candidates"
-                value={alarmingInput}
-                onChange={(e) => setAlarmingInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddAlarmingCandidate())}
-                helperText="Email addresses (press Enter)"
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton onClick={handleAddAlarmingCandidate}><AddIcon /></IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {formData.alarming_candidate?.map((c, i) => (
-                  <Chip
-                    key={i}
-                    label={c}
-                    onDelete={() => setFormData(p => ({ ...p, alarming_candidate: p.alarming_candidate?.filter((_, idx) => idx !== i) }))}
-                    color="primary"
-                    variant="outlined"
-                  />
-                ))}
+              <Typography variant="subtitle2" gutterBottom>
+                Alarming Contacts
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+                Add contacts who should receive alert notifications via email
+              </Typography>
+              
+              <Card variant="outlined" sx={{ p: 2, mb: 2 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Name"
+                      value={alarmingNameInput}
+                      onChange={(e) => setAlarmingNameInput(e.target.value)}
+                      placeholder="John Doe"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      required
+                      size="small"
+                      label="Email"
+                      type="email"
+                      value={alarmingEmailInput}
+                      onChange={(e) => setAlarmingEmailInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddAlarmingCandidate())}
+                      placeholder="john@example.com"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Mobile (Optional)"
+                      value={alarmingMobileInput}
+                      onChange={(e) => setAlarmingMobileInput(e.target.value)}
+                      placeholder="+1234567890"
+                      helperText="For future SMS notifications"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Role (Optional)"
+                      value={alarmingRoleInput}
+                      onChange={(e) => setAlarmingRoleInput(e.target.value)}
+                      placeholder="Primary, On-Call, etc."
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<AddIcon />}
+                      onClick={handleAddAlarmingCandidate}
+                      disabled={!alarmingEmailInput.trim()}
+                      fullWidth
+                    >
+                      Add Contact
+                    </Button>
+                  </Grid>
+                </Grid>
+              </Card>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {formData.alarming_candidate?.map((contact: any, i) => {
+                  const isString = typeof contact === 'string';
+                  const displayName = isString ? contact : contact.name || contact.email;
+                  const displayEmail = isString ? contact : contact.email;
+                  const displayMobile = isString ? null : contact.mobile;
+                  const displayRole = isString ? null : contact.role;
+                  
+                  return (
+                    <Card key={i} variant="outlined" sx={{ p: 1.5 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box>
+                          <Typography variant="body2" fontWeight="medium">
+                            {displayName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            📧 {displayEmail}
+                          </Typography>
+                          {displayMobile && (
+                            <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                              📱 {displayMobile}
+                            </Typography>
+                          )}
+                          {displayRole && (
+                            <Chip label={displayRole} size="small" sx={{ ml: 1 }} />
+                          )}
+                        </Box>
+                        <IconButton
+                          size="small"
+                          onClick={() => setFormData(p => ({ 
+                            ...p, 
+                            alarming_candidate: p.alarming_candidate?.filter((_, idx) => idx !== i) 
+                          }))}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </Card>
+                  );
+                })}
+                {(!formData.alarming_candidate || formData.alarming_candidate.length === 0) && (
+                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                    No contacts added yet
+                  </Typography>
+                )}
               </Box>
             </Grid>
             <Grid item xs={12}>
@@ -675,6 +782,194 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
                       <li><strong>Poor:</strong> &gt; 200ms (may indicate issues)</li>
                     </ul>
                     Set your thresholds below based on expected latency to this host.
+                  </Typography>
+                </Alert>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Log File Analysis Settings */}
+      {formData.monitor_type === 'log' && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">📄 Log File Analysis Configuration</Typography>
+            </Box>
+            <Divider sx={{ mb: 3 }} />
+            
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Analyze log files for error patterns and get AI-powered solution suggestions
+                </Alert>
+              </Grid>
+
+              {/* Log Location Type */}
+              <Grid item xs={12}>
+                <FormControl fullWidth required>
+                  <InputLabel>Log File Location</InputLabel>
+                  <Select
+                    value={(formData as any).log_config?.is_remote ? 'remote' : 'local'}
+                    label="Log File Location"
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      log_config: { 
+                        ...(prev as any).log_config, 
+                        is_remote: e.target.value === 'remote'
+                      }
+                    }))}
+                  >
+                    <MenuItem value="local">Local File System</MenuItem>
+                    <MenuItem value="remote">Remote Server (SSH)</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* SSH Configuration for Remote Logs */}
+              {(formData as any).log_config?.is_remote && (
+                <>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      required
+                      label="SSH Host"
+                      value={(formData as any).log_config?.ssh_host || ''}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        log_config: { ...(prev as any).log_config, ssh_host: e.target.value }
+                      }))}
+                      placeholder="192.168.1.100 or server.example.com"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="SSH Port"
+                      value={(formData as any).log_config?.ssh_port || 22}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        log_config: { ...(prev as any).log_config, ssh_port: parseInt(e.target.value) }
+                      }))}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      required
+                      label="SSH Username"
+                      value={(formData as any).log_config?.ssh_username || ''}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        log_config: { ...(prev as any).log_config, ssh_username: e.target.value }
+                      }))}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      required
+                      type="password"
+                      label="SSH Password"
+                      value={(formData as any).log_config?.ssh_password || ''}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        log_config: { ...(prev as any).log_config, ssh_password: e.target.value }
+                      }))}
+                    />
+                  </Grid>
+                </>
+              )}
+
+              {/* Log File Path */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  required
+                  label="Log File Path"
+                  value={(formData as any).log_config?.log_path || ''}
+                  onChange={(e) => {
+                    const logPath = e.target.value;
+                    setFormData(prev => ({
+                      ...prev,
+                      monitor_instance: logPath, // Auto-set monitor_instance
+                      log_config: { ...(prev as any).log_config, log_path: logPath }
+                    }));
+                  }}
+                  placeholder="/var/log/app/error.log or C:\logs\app.log"
+                  helperText="Full path to the log file to analyze"
+                />
+              </Grid>
+
+              {/* Lines to Analyze */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Lines to Analyze"
+                  value={(formData as any).log_config?.tail_lines || 100}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    log_config: { ...(prev as any).log_config, tail_lines: parseInt(e.target.value) }
+                  }))}
+                  helperText="Number of recent lines to check (tail)"
+                  inputProps={{ min: 10, max: 10000 }}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <Alert severity="success">
+                  <Typography variant="body2" gutterBottom>
+                    <strong>✨ Built-in Error Detection:</strong>
+                  </Typography>
+                  <Typography variant="caption" component="div">
+                    The log checker automatically detects common issues:
+                    <ul style={{ marginTop: 4, marginBottom: 0, paddingLeft: 20 }}>
+                      <li>Memory issues (OOM, memory leaks)</li>
+                      <li>Connection problems (refused, timeout)</li>
+                      <li>Disk space issues</li>
+                      <li>Permission errors</li>
+                      <li>Database errors</li>
+                      <li>SSL/Certificate issues</li>
+                      <li>500 errors and server crashes</li>
+                    </ul>
+                    Each issue comes with recommended solutions!
+                  </Typography>
+                </Alert>
+              </Grid>
+
+              <Grid item xs={12}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Custom Error Patterns (Optional)
+                </Typography>
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                  Add specific patterns to watch for in your logs
+                </Typography>
+                <Card variant="outlined" sx={{ p: 2 }}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Pattern (RegEx)"
+                    placeholder="CRITICAL|FATAL|Exception"
+                    helperText="Regular expression to match error lines"
+                    sx={{ mb: 2 }}
+                  />
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<AddIcon />}
+                  >
+                    Add Custom Pattern
+                  </Button>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12}>
+                <Alert severity="warning">
+                  <Typography variant="body2">
+                    <strong>📝 Note:</strong> For large log files (&gt;10MB), only the last {(formData as any).log_config?.tail_lines || 100} lines will be analyzed to ensure quick checks.
                   </Typography>
                 </Alert>
               </Grid>
