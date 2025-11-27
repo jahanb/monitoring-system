@@ -13,6 +13,8 @@ import { ApiPostChecker } from '@/lib/monitoring/checkers/ApiPostChecker';
 import { SshChecker } from '@/lib/monitoring/checkers/SshChecker';
 import { AwsChecker } from '@/lib/monitoring/checkers/AwsChecker';
 import { PingChecker } from '@/lib/monitoring/checkers/PingChecker';
+import { LogChecker } from '@/lib/monitoring/checkers/LogChecker';
+import { CertificateChecker } from '@/lib/monitoring/checkers/CertificateChecker';
 
 // Register all checkers immediately
 CheckerRegistry.register(new UrlChecker());
@@ -20,6 +22,8 @@ CheckerRegistry.register(new ApiPostChecker());
 CheckerRegistry.register(new SshChecker());
 CheckerRegistry.register(new AwsChecker());
 CheckerRegistry.register(new PingChecker());
+CheckerRegistry.register(new LogChecker());
+CheckerRegistry.register(new CertificateChecker());
 
 // console.log('✅ Checkers registered:', CheckerRegistry.getRegisteredTypes().join(', '));
 

@@ -12,6 +12,7 @@ export interface Monitor {
   severity: 'low' | 'medium' | 'high' | 'critical';
   monitor_instance: string;  // URL, system name, or app name
   ssh_config?: SshConfig;
+  certificate_config?: CertificateConfig;
   // Pattern matching for URL/response monitoring
   negative_pattern?: string;  // Pattern that should NOT appear
   positive_pattern?: string;  // Pattern that SHOULD appear
@@ -70,7 +71,14 @@ export interface MaintenanceWindow {
   description?: string;
   created_by: string;
 }
-
+export interface CertificateConfig {
+  hostname: string;
+  port?: number;
+  timeout?: number;
+  warning_threshold_days?: number;
+  alarm_threshold_days?: number;
+  check_chain?: boolean;
+}
 export interface SshConfig {
   host: string;
   port?: number;
