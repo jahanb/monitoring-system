@@ -12,6 +12,7 @@ import { SshChecker } from '@/lib/monitoring/checkers/SshChecker';
 import { AwsChecker } from '@/lib/monitoring/checkers/AwsChecker';
 import { PingChecker } from '@/lib/monitoring/checkers/PingChecker';
 
+
 // Register immediately
 CheckerRegistry.register(new UrlChecker());
 CheckerRegistry.register(new ApiPostChecker());
