@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
     // Insert monitor
     const result = await db
       .collection(Collections.MONITORS)
-      .insertOne(monitor);
+      .insertOne({ ...monitor, _id: undefined });
 
     // Initialize monitor state
     await db.collection(Collections.MONITOR_STATES).insertOne({

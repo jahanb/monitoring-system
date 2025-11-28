@@ -679,11 +679,11 @@ export default function AlertsPage() {
                                                                         Action: {attempt.action}
                                                                     </Typography>
                                                                     {attempt.error_message && (
-                                                                        <Alert severity="error" sx={{ mt: 1, py: 0 }}>
+                                                                        <MuiAlert severity="error" sx={{ mt: 1, py: 0 }}>
                                                                             <Typography variant="caption">
                                                                                 {attempt.error_message}
                                                                             </Typography>
-                                                                        </Alert>
+                                                                        </MuiAlert>
                                                                     )}
                                                                 </Box>
                                                             }

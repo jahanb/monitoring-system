@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const result = await executor.executeMonitor(monitor as Monitor);
+      const result = await executor.executeMonitor(monitor as unknown as Monitor);
 
       return NextResponse.json({
         success: true,
