@@ -47,11 +47,4 @@ export interface RecoveryAttempt {
   logs?: string;
 }
 
-export interface NotificationLog {
-  channel: 'email' | 'sms' | 'call' | 'webhook';
-  recipient: string;
-  sent_at: Date;
-  status: 'sent' | 'failed' | 'pending';
-  error_message?: string;
-  message_id?: string;
-}
+

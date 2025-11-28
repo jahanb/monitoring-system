@@ -5,6 +5,7 @@ import { getDatabase, Collections } from '@/lib/db/mongodb';
 import { ObjectId } from 'mongodb';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { Alert } from '@/lib/models/Alert';
 
 const execAsync = promisify(exec);
 
@@ -14,31 +15,31 @@ export async function POST(
 ) {
   try {
     const db = await getDatabase();
-    
+
     // Get the alert
-    const alert = await db.collection(Collections.ALERTS).findOne({
-      _id: new ObjectId(params.id)
+    const alert = await db.collection<Alert>(Collections.ALERTS).findOne({
+      _id: new ObjectId(params.id) as any
     });
-    
+
     if (!alert) {
       return NextResponse.json(
         { error: 'Alert not found' },
         { status: 404 }
       );
     }
-    
+
     // Get the monitor to find recovery action
     const monitor = await db.collection(Collections.MONITORS).findOne({
-      _id: new ObjectId(alert.monitor_id)
+      _id: new ObjectId(alert.monitor_id) as any
     });
-    
+
     if (!monitor || !monitor.recovery_action) {
       return NextResponse.json(
         { error: 'No recovery action defined for this monitor' },
         { status: 400 }
       );
     }
-    
+
     // Create recovery attempt
     const attemptNumber = (alert.recovery_attempts?.length || 0) + 1;
     const recoveryAttempt = {
@@ -47,21 +48,21 @@ export async function POST(
       started_at: new Date(),
       status: 'running' as const
     };
-    
+
     // Update alert status
-    await db.collection(Collections.ALERTS).updateOne(
-      { _id: new ObjectId(params.id) },
+    await db.collection<Alert>(Collections.ALERTS).updateOne(
+      { _id: new ObjectId(params.id) as any },
       {
         $set: { status: 'in_recovery' },
         $push: { recovery_attempts: recoveryAttempt }
       }
     );
-    
+
     // Execute recovery action asynchronously
     executeRecoveryAction(params.id, attemptNumber, monitor.recovery_action);
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    return NextResponse.json({
+      success: true,
       message: 'Recovery action initiated',
       attempt_number: attemptNumber
     });
@@ -80,19 +81,19 @@ async function executeRecoveryAction(
   action: string
 ) {
   const db = await getDatabase();
-  
+
   try {
     console.log(`🔧 Executing recovery action: ${action}`);
-    
+
     // Execute the recovery script/command
     const { stdout, stderr } = await execAsync(action, {
       timeout: 60000 // 1 minute timeout
     });
-    
+
     // Update recovery attempt with success
-    await db.collection(Collections.ALERTS).updateOne(
-      { 
-        _id: new ObjectId(alertId),
+    await db.collection<Alert>(Collections.ALERTS).updateOne(
+      {
+        _id: new ObjectId(alertId) as any,
         'recovery_attempts.attempt_number': attemptNumber
       },
       {
@@ -103,16 +104,16 @@ async function executeRecoveryAction(
         }
       }
     );
-    
+
     console.log(`✅ Recovery action completed successfully`);
-    
+
   } catch (error: any) {
     console.error(`❌ Recovery action failed:`, error.message);
-    
+
     // Update recovery attempt with failure
-    await db.collection(Collections.ALERTS).updateOne(
-      { 
-        _id: new ObjectId(alertId),
+    await db.collection<Alert>(Collections.ALERTS).updateOne(
+      {
+        _id: new ObjectId(alertId) as any,
         'recovery_attempts.attempt_number': attemptNumber
       },
       {
