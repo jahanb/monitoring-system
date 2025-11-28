@@ -11,6 +11,7 @@ export interface Alert {
   recovered_at?: Date;
   acknowledged_at?: Date;
   acknowledged_by?: string;
+  acknowledge_note?: string;
   last_notification_sent_at?: Date;
   // Alert details
   current_value: number;
