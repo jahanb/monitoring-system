@@ -13,7 +13,10 @@ import { AwsChecker } from '@/lib/monitoring/checkers/AwsChecker';
 import { PingChecker } from '@/lib/monitoring/checkers/PingChecker';
 import { LogChecker } from '@/lib/monitoring/checkers/LogChecker';
 import { CertificateChecker } from '@/lib/monitoring/checkers/CertificateChecker';
+import { GoogleCloudChecker } from '@/lib/monitoring/checkers/GoogleCloudChecker';
+import { AzureChecker } from '@/lib/monitoring/checkers/AzureChecker';
 
+// lib/monitoring/checkers/GoogleCloudChecker
 // Register immediately
 CheckerRegistry.register(new UrlChecker());
 CheckerRegistry.register(new ApiPostChecker());
@@ -22,6 +25,8 @@ CheckerRegistry.register(new AwsChecker());
 CheckerRegistry.register(new PingChecker());
 CheckerRegistry.register(new LogChecker());
 CheckerRegistry.register(new CertificateChecker());
+CheckerRegistry.register(new GoogleCloudChecker());
+CheckerRegistry.register(new AzureChecker());
 
 // GET /api/monitors - List all monitors
 export async function GET(request: NextRequest) {

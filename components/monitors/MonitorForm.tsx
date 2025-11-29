@@ -74,7 +74,6 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
   });
 
   // Initialize nested configs from initialData
-
   useEffect(() => {
     if (initialData) {
       setFormData(prev => ({
@@ -82,9 +81,11 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
         ...(initialData as any).ssh_config && { ssh_config: (initialData as any).ssh_config },
         ...(initialData as any).aws_config && { aws_config: (initialData as any).aws_config },
         ...(initialData as any).post_body && { post_body: (initialData as any).post_body },
-        ...(initialData as any).log_config && { log_config: (initialData as any).log_config },  // ADD THIS
-        ...(initialData as any).certificate_config && { certificate_config: (initialData as any).certificate_config },  // ADD THIS
-        ...(initialData as any).alert_settings && { alert_settings: (initialData as any).alert_settings },  // ADD THIS
+        ...(initialData as any).log_config && { log_config: (initialData as any).log_config },
+        ...(initialData as any).certificate_config && { certificate_config: (initialData as any).certificate_config },
+        ...(initialData as any).alert_settings && { alert_settings: (initialData as any).alert_settings },
+        ...(initialData as any).gcp_config && { gcp_config: (initialData as any).gcp_config },
+        ...(initialData as any).azure_config && { azure_config: (initialData as any).azure_config },
       }));
     }
   }, [initialData]);
@@ -218,7 +219,7 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
         setError('Resource ID is required');
         return false;
       }
-    } else if (formData.monitor_type === 'certificate') {  // ADD THIS BLOCK
+    } else if (formData.monitor_type === 'certificate') {
       const cert = (formData as any).certificate_config;
       if (!cert?.hostname) {
         setError('Hostname is required for certificate monitoring');
@@ -248,7 +249,7 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
         setError('Alarm threshold must be less than warning threshold');
         return false;
       }
-    } else if (formData.monitor_type === 'log') {  // ADD LOG VALIDATION
+    } else if (formData.monitor_type === 'log') {
       const log = (formData as any).log_config;
       if (!log?.log_path) {
         setError('Log file path is required');
@@ -267,6 +268,54 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
           setError('SSH password is required for remote logs');
           return false;
         }
+      }
+    } else if (formData.monitor_type === 'gcp') {
+      const gcp = (formData as any).gcp_config;
+      if (!gcp?.project_id) {
+        setError('GCP Project ID is required');
+        return false;
+      }
+      if (!gcp?.resource_type) {
+        setError('GCP Resource Type is required');
+        return false;
+      }
+      if (!gcp?.resource_id) {
+        setError('GCP Resource ID is required');
+        return false;
+      }
+      if (!gcp?.credentials_path) {
+        setError('GCP Credentials Path is required');
+        return false;
+      }
+    } else if (formData.monitor_type === 'azure') {
+      const azure = (formData as any).azure_config;
+      if (!azure?.subscription_id) {
+        setError('Azure Subscription ID is required');
+        return false;
+      }
+      if (!azure?.resource_group) {
+        setError('Azure Resource Group is required');
+        return false;
+      }
+      if (!azure?.resource_type) {
+        setError('Azure Resource Type is required');
+        return false;
+      }
+      if (!azure?.resource_name) {
+        setError('Azure Resource Name is required');
+        return false;
+      }
+      if (!azure?.tenant_id) {
+        setError('Azure Tenant ID is required');
+        return false;
+      }
+      if (!azure?.client_id) {
+        setError('Azure Client ID is required');
+        return false;
+      }
+      if (!azure?.client_secret) {
+        setError('Azure Client Secret is required');
+        return false;
       }
     } else {
       // For URL, API POST, and other types, monitor_instance is required
@@ -288,6 +337,7 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
 
     return true;
   };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -328,7 +378,7 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
       {success && <Alert severity="success" sx={{ mb: 3 }}>Monitor {mode === 'create' ? 'created' : 'updated'} successfully!</Alert>}
 
       {/* Basic Information */}
-      <Card sx={{ mb: 3 }}>
+      < Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>Basic Information</Typography>
           <Divider sx={{ mb: 3 }} />
@@ -351,6 +401,8 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
                   <MenuItem value="api_post">API POST Request</MenuItem>
                   <MenuItem value="certificate">🔒 SSL/TLS Certificate</MenuItem>  {/* ADD THIS */}
                   <MenuItem value="ssh">SSH Remote Command</MenuItem>
+                  <MenuItem value="gcp">☁️ Google Cloud Platform</MenuItem>
+                  <MenuItem value="azure">🔷 Microsoft Azure</MenuItem>
                   <MenuItem value="aws">AWS CloudWatch</MenuItem>
                   <MenuItem value="ping">Ping / ICMP</MenuItem>
                   <MenuItem value="log">Log File Analysis</MenuItem>
@@ -425,10 +477,10 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
             </Grid>
           </Grid>
         </CardContent>
-      </Card>
+      </Card >
 
       {/* Alarming & Dependencies */}
-      <Card sx={{ mb: 3 }}>
+      < Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>Alarming & Dependencies</Typography>
           <Divider sx={{ mb: 3 }} />
@@ -577,1056 +629,1322 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
             </Grid>
           </Grid>
         </CardContent>
-      </Card>
+      </Card >
 
       {/* AWS Settings */}
-      {formData.monitor_type === 'aws' && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <CloudIcon sx={{ mr: 1, color: 'primary.main' }} />
-              <Typography variant="h6">AWS CloudWatch Configuration</Typography>
-            </Box>
-            <Divider sx={{ mb: 3 }} />
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  Monitor AWS resources (EC2, RDS, Lambda) using CloudWatch metrics
-                </Alert>
-              </Grid>
+      {
+        formData.monitor_type === 'aws' && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <CloudIcon sx={{ mr: 1, color: 'primary.main' }} />
+                <Typography variant="h6">AWS CloudWatch Configuration</Typography>
+              </Box>
+              <Divider sx={{ mb: 3 }} />
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    Monitor AWS resources (EC2, RDS, Lambda) using CloudWatch metrics
+                  </Alert>
+                </Grid>
 
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>AWS Service</InputLabel>
-                  <Select
-                    value={(formData as any).aws_config?.service || ''}
-                    label="AWS Service"
-                    onChange={(e) => {
-                      const service = e.target.value;
-                      setFormData(prev => ({
-                        ...prev,
-                        aws_config: {
-                          ...(prev as any).aws_config,
-                          service,
-                          metric_name: service === 'lambda' ? 'Errors' : 'CPUUtilization'
-                        }
-                      }));
-                    }}
-                  >
-                    <MenuItem value="ec2">EC2 - Elastic Compute Cloud</MenuItem>
-                    <MenuItem value="rds">RDS - Relational Database</MenuItem>
-                    <MenuItem value="lambda">Lambda - Serverless Functions</MenuItem>
-                  </Select>
-                  <FormHelperText>Select the AWS service to monitor</FormHelperText>
-                </FormControl>
-              </Grid>
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth required>
+                    <InputLabel>AWS Service</InputLabel>
+                    <Select
+                      value={(formData as any).aws_config?.service || ''}
+                      label="AWS Service"
+                      onChange={(e) => {
+                        const service = e.target.value;
+                        setFormData(prev => ({
+                          ...prev,
+                          aws_config: {
+                            ...(prev as any).aws_config,
+                            service,
+                            metric_name: service === 'lambda' ? 'Errors' : 'CPUUtilization'
+                          }
+                        }));
+                      }}
+                    >
+                      <MenuItem value="ec2">EC2 - Elastic Compute Cloud</MenuItem>
+                      <MenuItem value="rds">RDS - Relational Database</MenuItem>
+                      <MenuItem value="lambda">Lambda - Serverless Functions</MenuItem>
+                    </Select>
+                    <FormHelperText>Select the AWS service to monitor</FormHelperText>
+                  </FormControl>
+                </Grid>
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  required
-                  label="AWS Region"
-                  value={(formData as any).aws_config?.region || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    aws_config: { ...(prev as any).aws_config, region: e.target.value }
-                  }))}
-                  placeholder="us-east-1"
-                  helperText="e.g., us-east-1, eu-west-1"
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  required
-                  label="Resource ID"
-                  value={(formData as any).aws_config?.resource_id || ''}
-                  onChange={(e) => {
-                    const resourceId = e.target.value;
-                    setFormData(prev => ({
-                      ...prev,
-                      monitor_instance: resourceId,
-                      aws_config: { ...(prev as any).aws_config, resource_id: resourceId }
-                    }));
-                  }}
-                  placeholder={
-                    (formData as any).aws_config?.service === 'ec2' ? 'i-0123456789abcdef0' :
-                      (formData as any).aws_config?.service === 'rds' ? 'mydb-instance' :
-                        (formData as any).aws_config?.service === 'lambda' ? 'my-function-name' :
-                          'Resource identifier'
-                  }
-                  helperText={
-                    (formData as any).aws_config?.service === 'ec2' ? 'EC2 Instance ID (e.g., i-0123456789abcdef0)' :
-                      (formData as any).aws_config?.service === 'rds' ? 'RDS DB Instance Identifier' :
-                        (formData as any).aws_config?.service === 'lambda' ? 'Lambda Function Name' :
-                          'Enter the resource identifier'
-                  }
-                />
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  required
-                  label="Access Key ID"
-                  value={(formData as any).aws_config?.access_key_id || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    aws_config: { ...(prev as any).aws_config, access_key_id: e.target.value }
-                  }))}
-                  helperText="AWS IAM Access Key ID"
-                />
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  required
-                  type="password"
-                  label="Secret Access Key"
-                  value={(formData as any).aws_config?.secret_access_key || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    aws_config: { ...(prev as any).aws_config, secret_access_key: e.target.value }
-                  }))}
-                  helperText="AWS IAM Secret Access Key"
-                />
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Metric Name"
-                  value={(formData as any).aws_config?.metric_name || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    aws_config: { ...(prev as any).aws_config, metric_name: e.target.value }
-                  }))}
-                  placeholder={
-                    (formData as any).aws_config?.service === 'lambda' ? 'Errors' : 'CPUUtilization'
-                  }
-                  helperText="CloudWatch metric to monitor (optional, has defaults)"
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <Alert severity="warning">
-                  <Typography variant="body2" gutterBottom>
-                    <strong>IAM Permissions Required:</strong>
-                  </Typography>
-                  <Typography variant="body2" component="div">
-                    The IAM user needs these permissions:
-                    <ul style={{ marginTop: 4, marginBottom: 0 }}>
-                      {(formData as any).aws_config?.service === 'ec2' && (
-                        <>
-                          <li>cloudwatch:GetMetricStatistics</li>
-                          <li>ec2:DescribeInstances</li>
-                          <li>ec2:DescribeInstanceStatus</li>
-                        </>
-                      )}
-                      {(formData as any).aws_config?.service === 'rds' && (
-                        <>
-                          <li>cloudwatch:GetMetricStatistics</li>
-                          <li>rds:DescribeDBInstances</li>
-                        </>
-                      )}
-                      {(formData as any).aws_config?.service === 'lambda' && (
-                        <>
-                          <li>cloudwatch:GetMetricStatistics</li>
-                          <li>lambda:GetFunction</li>
-                        </>
-                      )}
-                      {!(formData as any).aws_config?.service && (
-                        <li>Select a service to see required permissions</li>
-                      )}
-                    </ul>
-                  </Typography>
-                </Alert>
-              </Grid>
-
-              <Grid item xs={12}>
-                <Alert severity="info">
-                  <Typography variant="body2">
-                    <strong>Available Metrics by Service:</strong>
-                  </Typography>
-                  <Typography variant="body2" component="div">
-                    <ul style={{ marginTop: 4, marginBottom: 0 }}>
-                      <li><strong>EC2:</strong> CPUUtilization, NetworkIn, NetworkOut, DiskReadBytes, DiskWriteBytes</li>
-                      <li><strong>RDS:</strong> CPUUtilization, DatabaseConnections, FreeStorageSpace, ReadLatency</li>
-                      <li><strong>Lambda:</strong> Errors, Duration, Invocations, Throttles, ConcurrentExecutions</li>
-                    </ul>
-                  </Typography>
-                </Alert>
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Ping Settings */}
-      {formData.monitor_type === 'ping' && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">🏓 Ping Configuration</Typography>
-            </Box>
-            <Divider sx={{ mb: 3 }} />
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  Ping monitoring checks network connectivity and measures latency (response time) to a host or IP address.
-                </Alert>
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Packet Count"
-                  value={(formData as any).ping_config?.count || 4}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    ping_config: { ...(prev as any).ping_config, count: parseInt(e.target.value) || 4 }
-                  }))}
-                  helperText="Number of ping packets to send"
-                  inputProps={{ min: 1, max: 10 }}
-                />
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Timeout"
-                  value={(formData as any).ping_config?.timeout || 5}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    ping_config: { ...(prev as any).ping_config, timeout: parseInt(e.target.value) || 5 }
-                  }))}
-                  helperText="Timeout per packet (seconds)"
-                  InputProps={{ endAdornment: <InputAdornment position="end">sec</InputAdornment> }}
-                  inputProps={{ min: 1, max: 30 }}
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <Alert severity="warning">
-                  <Typography variant="body2">
-                    <strong>Network Requirements:</strong>
-                  </Typography>
-                  <Typography variant="body2" component="div">
-                    <ul style={{ marginTop: 4, marginBottom: 0 }}>
-                      <li>ICMP (ping) packets must be allowed through firewalls</li>
-                      <li>Some hosts may block ICMP requests for security</li>
-                      <li>Running on Windows requires no special permissions</li>
-                      <li>On Linux/macOS, may require root privileges for raw sockets</li>
-                    </ul>
-                  </Typography>
-                </Alert>
-              </Grid>
-
-              <Grid item xs={12}>
-                <Alert severity="info">
-                  <Typography variant="body2">
-                    <strong>Threshold Guidelines for Ping (in milliseconds):</strong>
-                  </Typography>
-                  <Typography variant="body2" component="div">
-                    <ul style={{ marginTop: 4, marginBottom: 0 }}>
-                      <li><strong>Excellent:</strong> &lt; 30ms (local network)</li>
-                      <li><strong>Good:</strong> 30-100ms (same region)</li>
-                      <li><strong>Fair:</strong> 100-200ms (different region)</li>
-                      <li><strong>Poor:</strong> &gt; 200ms (may indicate issues)</li>
-                    </ul>
-                    Set your thresholds below based on expected latency to this host.
-                  </Typography>
-                </Alert>
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Log File Analysis Settings */}
-      {formData.monitor_type === 'log' && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">📄 Log File Analysis Configuration</Typography>
-            </Box>
-            <Divider sx={{ mb: 3 }} />
-
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  Analyze log files for error patterns and get AI-powered solution suggestions
-                </Alert>
-              </Grid>
-
-              {/* Log Location Type */}
-              <Grid item xs={12}>
-                <FormControl fullWidth required>
-                  <InputLabel>Log File Location</InputLabel>
-                  <Select
-                    value={(formData as any).log_config?.is_remote ? 'remote' : 'local'}
-                    label="Log File Location"
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      log_config: {
-                        ...(prev as any).log_config,
-                        is_remote: e.target.value === 'remote'
-                      }
-                    }))}
-                  >
-                    <MenuItem value="local">Local File System</MenuItem>
-                    <MenuItem value="remote">Remote Server (SSH)</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* SSH Configuration for Remote Logs */}
-              {(formData as any).log_config?.is_remote && (
-                <>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      required
-                      label="SSH Host"
-                      value={(formData as any).log_config?.ssh_host || ''}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        log_config: { ...(prev as any).log_config, ssh_host: e.target.value }
-                      }))}
-                      placeholder="192.168.1.100 or server.example.com"
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      type="number"
-                      label="SSH Port"
-                      value={(formData as any).log_config?.ssh_port || 22}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        log_config: { ...(prev as any).log_config, ssh_port: parseInt(e.target.value) }
-                      }))}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      required
-                      label="SSH Username"
-                      value={(formData as any).log_config?.ssh_username || ''}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        log_config: { ...(prev as any).log_config, ssh_username: e.target.value }
-                      }))}
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      required
-                      type="password"
-                      label="SSH Password"
-                      value={(formData as any).log_config?.ssh_password || ''}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        log_config: { ...(prev as any).log_config, ssh_password: e.target.value }
-                      }))}
-                    />
-                  </Grid>
-                </>
-              )}
-
-              {/* Log File Path */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  required
-                  label="Log File Path"
-                  value={(formData as any).log_config?.log_path || ''}
-                  onChange={(e) => {
-                    const logPath = e.target.value;
-                    setFormData(prev => ({
-                      ...prev,
-                      monitor_instance: logPath, // Auto-set monitor_instance
-                      log_config: { ...(prev as any).log_config, log_path: logPath }
-                    }));
-                  }}
-                  placeholder="/var/log/app/error.log or C:\logs\app.log"
-                  helperText="Full path to the log file to analyze"
-                />
-              </Grid>
-
-              {/* Lines to Analyze */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Lines to Analyze"
-                  value={(formData as any).log_config?.tail_lines || 100}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    log_config: { ...(prev as any).log_config, tail_lines: parseInt(e.target.value) }
-                  }))}
-                  helperText="Number of recent lines to check (tail)"
-                  inputProps={{ min: 10, max: 10000 }}
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <Alert severity="success">
-                  <Typography variant="body2" gutterBottom>
-                    <strong>✨ Built-in Error Detection:</strong>
-                  </Typography>
-                  <Typography variant="caption" component="div">
-                    The log checker automatically detects common issues:
-                    <ul style={{ marginTop: 4, marginBottom: 0, paddingLeft: 20 }}>
-                      <li>Memory issues (OOM, memory leaks)</li>
-                      <li>Connection problems (refused, timeout)</li>
-                      <li>Disk space issues</li>
-                      <li>Permission errors</li>
-                      <li>Database errors</li>
-                      <li>SSL/Certificate issues</li>
-                      <li>500 errors and server crashes</li>
-                    </ul>
-                    Each issue comes with recommended solutions!
-                  </Typography>
-                </Alert>
-              </Grid>
-
-              <Grid item xs={12}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Custom Error Patterns (Optional)
-                </Typography>
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-                  Add specific patterns to watch for in your logs
-                </Typography>
-                <Card variant="outlined" sx={{ p: 2 }}>
+                <Grid item xs={12} md={6}>
                   <TextField
                     fullWidth
-                    size="small"
-                    label="Pattern (RegEx)"
-                    placeholder="CRITICAL|FATAL|Exception"
-                    helperText="Regular expression to match error lines"
-                    sx={{ mb: 2 }}
+                    required
+                    label="AWS Region"
+                    value={(formData as any).aws_config?.region || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      aws_config: { ...(prev as any).aws_config, region: e.target.value }
+                    }))}
+                    placeholder="us-east-1"
+                    helperText="e.g., us-east-1, eu-west-1"
                   />
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<AddIcon />}
-                  >
-                    Add Custom Pattern
-                  </Button>
-                </Card>
-              </Grid>
+                </Grid>
 
-              <Grid item xs={12}>
-                <Alert severity="warning">
-                  <Typography variant="body2">
-                    <strong>📝 Note:</strong> For large log files (&gt;10MB), only the last {(formData as any).log_config?.tail_lines || 100} lines will be analyzed to ensure quick checks.
-                  </Typography>
-                </Alert>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Resource ID"
+                    value={(formData as any).aws_config?.resource_id || ''}
+                    onChange={(e) => {
+                      const resourceId = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        monitor_instance: resourceId,
+                        aws_config: { ...(prev as any).aws_config, resource_id: resourceId }
+                      }));
+                    }}
+                    placeholder={
+                      (formData as any).aws_config?.service === 'ec2' ? 'i-0123456789abcdef0' :
+                        (formData as any).aws_config?.service === 'rds' ? 'mydb-instance' :
+                          (formData as any).aws_config?.service === 'lambda' ? 'my-function-name' :
+                            'Resource identifier'
+                    }
+                    helperText={
+                      (formData as any).aws_config?.service === 'ec2' ? 'EC2 Instance ID (e.g., i-0123456789abcdef0)' :
+                        (formData as any).aws_config?.service === 'rds' ? 'RDS DB Instance Identifier' :
+                          (formData as any).aws_config?.service === 'lambda' ? 'Lambda Function Name' :
+                            'Enter the resource identifier'
+                    }
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Access Key ID"
+                    value={(formData as any).aws_config?.access_key_id || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      aws_config: { ...(prev as any).aws_config, access_key_id: e.target.value }
+                    }))}
+                    helperText="AWS IAM Access Key ID"
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    type="password"
+                    label="Secret Access Key"
+                    value={(formData as any).aws_config?.secret_access_key || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      aws_config: { ...(prev as any).aws_config, secret_access_key: e.target.value }
+                    }))}
+                    helperText="AWS IAM Secret Access Key"
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Metric Name"
+                    value={(formData as any).aws_config?.metric_name || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      aws_config: { ...(prev as any).aws_config, metric_name: e.target.value }
+                    }))}
+                    placeholder={
+                      (formData as any).aws_config?.service === 'lambda' ? 'Errors' : 'CPUUtilization'
+                    }
+                    helperText="CloudWatch metric to monitor (optional, has defaults)"
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Alert severity="warning">
+                    <Typography variant="body2" gutterBottom>
+                      <strong>IAM Permissions Required:</strong>
+                    </Typography>
+                    <Typography variant="body2" component="div">
+                      The IAM user needs these permissions:
+                      <ul style={{ marginTop: 4, marginBottom: 0 }}>
+                        {(formData as any).aws_config?.service === 'ec2' && (
+                          <>
+                            <li>cloudwatch:GetMetricStatistics</li>
+                            <li>ec2:DescribeInstances</li>
+                            <li>ec2:DescribeInstanceStatus</li>
+                          </>
+                        )}
+                        {(formData as any).aws_config?.service === 'rds' && (
+                          <>
+                            <li>cloudwatch:GetMetricStatistics</li>
+                            <li>rds:DescribeDBInstances</li>
+                          </>
+                        )}
+                        {(formData as any).aws_config?.service === 'lambda' && (
+                          <>
+                            <li>cloudwatch:GetMetricStatistics</li>
+                            <li>lambda:GetFunction</li>
+                          </>
+                        )}
+                        {!(formData as any).aws_config?.service && (
+                          <li>Select a service to see required permissions</li>
+                        )}
+                      </ul>
+                    </Typography>
+                  </Alert>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Alert severity="info">
+                    <Typography variant="body2">
+                      <strong>Available Metrics by Service:</strong>
+                    </Typography>
+                    <Typography variant="body2" component="div">
+                      <ul style={{ marginTop: 4, marginBottom: 0 }}>
+                        <li><strong>EC2:</strong> CPUUtilization, NetworkIn, NetworkOut, DiskReadBytes, DiskWriteBytes</li>
+                        <li><strong>RDS:</strong> CPUUtilization, DatabaseConnections, FreeStorageSpace, ReadLatency</li>
+                        <li><strong>Lambda:</strong> Errors, Duration, Invocations, Throttles, ConcurrentExecutions</li>
+                      </ul>
+                    </Typography>
+                  </Alert>
+                </Grid>
               </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        )
+      }
+
+      {/* Ping Settings */}
+      {
+        formData.monitor_type === 'ping' && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">🏓 Ping Configuration</Typography>
+              </Box>
+              <Divider sx={{ mb: 3 }} />
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    Ping monitoring checks network connectivity and measures latency (response time) to a host or IP address.
+                  </Alert>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Packet Count"
+                    value={(formData as any).ping_config?.count || 4}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      ping_config: { ...(prev as any).ping_config, count: parseInt(e.target.value) || 4 }
+                    }))}
+                    helperText="Number of ping packets to send"
+                    inputProps={{ min: 1, max: 10 }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Timeout"
+                    value={(formData as any).ping_config?.timeout || 5}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      ping_config: { ...(prev as any).ping_config, timeout: parseInt(e.target.value) || 5 }
+                    }))}
+                    helperText="Timeout per packet (seconds)"
+                    InputProps={{ endAdornment: <InputAdornment position="end">sec</InputAdornment> }}
+                    inputProps={{ min: 1, max: 30 }}
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Alert severity="warning">
+                    <Typography variant="body2">
+                      <strong>Network Requirements:</strong>
+                    </Typography>
+                    <Typography variant="body2" component="div">
+                      <ul style={{ marginTop: 4, marginBottom: 0 }}>
+                        <li>ICMP (ping) packets must be allowed through firewalls</li>
+                        <li>Some hosts may block ICMP requests for security</li>
+                        <li>Running on Windows requires no special permissions</li>
+                        <li>On Linux/macOS, may require root privileges for raw sockets</li>
+                      </ul>
+                    </Typography>
+                  </Alert>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Alert severity="info">
+                    <Typography variant="body2">
+                      <strong>Threshold Guidelines for Ping (in milliseconds):</strong>
+                    </Typography>
+                    <Typography variant="body2" component="div">
+                      <ul style={{ marginTop: 4, marginBottom: 0 }}>
+                        <li><strong>Excellent:</strong> &lt; 30ms (local network)</li>
+                        <li><strong>Good:</strong> 30-100ms (same region)</li>
+                        <li><strong>Fair:</strong> 100-200ms (different region)</li>
+                        <li><strong>Poor:</strong> &gt; 200ms (may indicate issues)</li>
+                      </ul>
+                      Set your thresholds below based on expected latency to this host.
+                    </Typography>
+                  </Alert>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        )
+      }
+
+      {/* Log File Analysis Settings */}
+      {
+        formData.monitor_type === 'log' && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">📄 Log File Analysis Configuration</Typography>
+              </Box>
+              <Divider sx={{ mb: 3 }} />
+
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    Analyze log files for error patterns and get AI-powered solution suggestions
+                  </Alert>
+                </Grid>
+
+                {/* Log Location Type */}
+                <Grid item xs={12}>
+                  <FormControl fullWidth required>
+                    <InputLabel>Log File Location</InputLabel>
+                    <Select
+                      value={(formData as any).log_config?.is_remote ? 'remote' : 'local'}
+                      label="Log File Location"
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        log_config: {
+                          ...(prev as any).log_config,
+                          is_remote: e.target.value === 'remote'
+                        }
+                      }))}
+                    >
+                      <MenuItem value="local">Local File System</MenuItem>
+                      <MenuItem value="remote">Remote Server (SSH)</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                {/* SSH Configuration for Remote Logs */}
+                {(formData as any).log_config?.is_remote && (
+                  <>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        required
+                        label="SSH Host"
+                        value={(formData as any).log_config?.ssh_host || ''}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          log_config: { ...(prev as any).log_config, ssh_host: e.target.value }
+                        }))}
+                        placeholder="192.168.1.100 or server.example.com"
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        type="number"
+                        label="SSH Port"
+                        value={(formData as any).log_config?.ssh_port || 22}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          log_config: { ...(prev as any).log_config, ssh_port: parseInt(e.target.value) }
+                        }))}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        required
+                        label="SSH Username"
+                        value={(formData as any).log_config?.ssh_username || ''}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          log_config: { ...(prev as any).log_config, ssh_username: e.target.value }
+                        }))}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        required
+                        type="password"
+                        label="SSH Password"
+                        value={(formData as any).log_config?.ssh_password || ''}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          log_config: { ...(prev as any).log_config, ssh_password: e.target.value }
+                        }))}
+                      />
+                    </Grid>
+                  </>
+                )}
+
+                {/* Log File Path */}
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Log File Path"
+                    value={(formData as any).log_config?.log_path || ''}
+                    onChange={(e) => {
+                      const logPath = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        monitor_instance: logPath, // Auto-set monitor_instance
+                        log_config: { ...(prev as any).log_config, log_path: logPath }
+                      }));
+                    }}
+                    placeholder="/var/log/app/error.log or C:\logs\app.log"
+                    helperText="Full path to the log file to analyze"
+                  />
+                </Grid>
+
+                {/* Lines to Analyze */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Lines to Analyze"
+                    value={(formData as any).log_config?.tail_lines || 100}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      log_config: { ...(prev as any).log_config, tail_lines: parseInt(e.target.value) }
+                    }))}
+                    helperText="Number of recent lines to check (tail)"
+                    inputProps={{ min: 10, max: 10000 }}
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Alert severity="success">
+                    <Typography variant="body2" gutterBottom>
+                      <strong>✨ Built-in Error Detection:</strong>
+                    </Typography>
+                    <Typography variant="caption" component="div">
+                      The log checker automatically detects common issues:
+                      <ul style={{ marginTop: 4, marginBottom: 0, paddingLeft: 20 }}>
+                        <li>Memory issues (OOM, memory leaks)</li>
+                        <li>Connection problems (refused, timeout)</li>
+                        <li>Disk space issues</li>
+                        <li>Permission errors</li>
+                        <li>Database errors</li>
+                        <li>SSL/Certificate issues</li>
+                        <li>500 errors and server crashes</li>
+                      </ul>
+                      Each issue comes with recommended solutions!
+                    </Typography>
+                  </Alert>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Custom Error Patterns (Optional)
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                    Add specific patterns to watch for in your logs
+                  </Typography>
+                  <Card variant="outlined" sx={{ p: 2 }}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Pattern (RegEx)"
+                      placeholder="CRITICAL|FATAL|Exception"
+                      helperText="Regular expression to match error lines"
+                      sx={{ mb: 2 }}
+                    />
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<AddIcon />}
+                    >
+                      Add Custom Pattern
+                    </Button>
+                  </Card>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Alert severity="warning">
+                    <Typography variant="body2">
+                      <strong>📝 Note:</strong> For large log files (&gt;10MB), only the last {(formData as any).log_config?.tail_lines || 100} lines will be analyzed to ensure quick checks.
+                    </Typography>
+                  </Alert>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        )
+      }
 // Add this section to MonitorForm.tsx after the Log File Analysis section
       // Place it before the URL Settings section
 
       {/* Certificate Monitoring Settings */}
-      {formData.monitor_type === 'certificate' && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">🔒 SSL/TLS Certificate Monitoring</Typography>
-            </Box>
-            <Divider sx={{ mb: 3 }} />
+      {
+        formData.monitor_type === 'certificate' && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">🔒 SSL/TLS Certificate Monitoring</Typography>
+              </Box>
+              <Divider sx={{ mb: 3 }} />
 
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  Monitor SSL/TLS certificate expiration and get daily alerts when renewal is needed.
-                  Perfect for preventing certificate expiration incidents.
-                </Alert>
-              </Grid>
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    Monitor SSL/TLS certificate expiration and get daily alerts when renewal is needed.
+                    Perfect for preventing certificate expiration incidents.
+                  </Alert>
+                </Grid>
 
-              {/* Hostname */}
-              <Grid item xs={12} md={8}>
-                <TextField
-                  fullWidth
-                  required
-                  label="Hostname / Domain"
-                  value={(formData as any).certificate_config?.hostname || ''}
-                  onChange={(e) => {
-                    const hostname = e.target.value;
-                    setFormData(prev => ({
-                      ...prev,
-                      monitor_instance: hostname, // Auto-set monitor_instance
-                      certificate_config: {
-                        ...(prev as any).certificate_config,
-                        hostname
-                      }
-                    }));
-                  }}
-                  placeholder="www.example.com"
-                  helperText="Domain name or hostname to check (without https://)"
-                />
-              </Grid>
+                {/* Hostname */}
+                <Grid item xs={12} md={8}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Hostname / Domain"
+                    value={(formData as any).certificate_config?.hostname || ''}
+                    onChange={(e) => {
+                      const hostname = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        monitor_instance: hostname, // Auto-set monitor_instance
+                        certificate_config: {
+                          ...(prev as any).certificate_config,
+                          hostname
+                        }
+                      }));
+                    }}
+                    placeholder="www.example.com"
+                    helperText="Domain name or hostname to check (without https://)"
+                  />
+                </Grid>
 
-              {/* Port */}
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Port"
-                  value={(formData as any).certificate_config?.port || 443}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    certificate_config: {
-                      ...(prev as any).certificate_config,
-                      port: parseInt(e.target.value) || 443
-                    }
-                  }))}
-                  helperText="SSL/TLS port"
-                  inputProps={{ min: 1, max: 65535 }}
-                />
-              </Grid>
-
-              {/* Warning Threshold */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Warning Threshold"
-                  value={(formData as any).certificate_config?.warning_threshold_days || 30}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    certificate_config: {
-                      ...(prev as any).certificate_config,
-                      warning_threshold_days: parseInt(e.target.value) || 30
-                    }
-                  }))}
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">days</InputAdornment>
-                  }}
-                  helperText="Send warning when expiring in X days"
-                  inputProps={{ min: 1, max: 365 }}
-                />
-              </Grid>
-
-              {/* Alarm Threshold */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Alarm Threshold"
-                  value={(formData as any).certificate_config?.alarm_threshold_days || 7}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    certificate_config: {
-                      ...(prev as any).certificate_config,
-                      alarm_threshold_days: parseInt(e.target.value) || 7
-                    }
-                  }))}
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">days</InputAdornment>
-                  }}
-                  helperText="Send alarm when expiring in X days"
-                  inputProps={{ min: 1, max: 90 }}
-                />
-              </Grid>
-
-              {/* Connection Timeout */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Connection Timeout"
-                  value={(formData as any).certificate_config?.timeout || 30}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    certificate_config: {
-                      ...(prev as any).certificate_config,
-                      timeout: parseInt(e.target.value) || 30
-                    }
-                  }))}
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">seconds</InputAdornment>
-                  }}
-                  helperText="Time to wait for connection"
-                  inputProps={{ min: 5, max: 120 }}
-                />
-              </Grid>
-
-              {/* Check Certificate Chain */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Check Certificate Chain</InputLabel>
-                  <Select
-                    value={(formData as any).certificate_config?.check_chain !== false ? 'yes' : 'no'}
-                    label="Check Certificate Chain"
+                {/* Port */}
+                <Grid item xs={12} md={4}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Port"
+                    value={(formData as any).certificate_config?.port || 443}
                     onChange={(e) => setFormData(prev => ({
                       ...prev,
                       certificate_config: {
                         ...(prev as any).certificate_config,
-                        check_chain: e.target.value === 'yes'
+                        port: parseInt(e.target.value) || 443
                       }
                     }))}
-                  >
-                    <MenuItem value="yes">Yes - Check entire chain</MenuItem>
-                    <MenuItem value="no">No - Check only main cert</MenuItem>
-                  </Select>
-                  <FormHelperText>
-                    Verify intermediate certificates too
-                  </FormHelperText>
-                </FormControl>
-              </Grid>
+                    helperText="SSL/TLS port"
+                    inputProps={{ min: 1, max: 65535 }}
+                  />
+                </Grid>
 
-              {/* Daily Reminders Toggle */}
-              <Grid item xs={12}>
-                <Card variant="outlined" sx={{ p: 2, bgcolor: '#fef3c7' }}>
+                {/* Warning Threshold */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Warning Threshold"
+                    value={(formData as any).certificate_config?.warning_threshold_days || 30}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      certificate_config: {
+                        ...(prev as any).certificate_config,
+                        warning_threshold_days: parseInt(e.target.value) || 30
+                      }
+                    }))}
+                    InputProps={{
+                      endAdornment: <InputAdornment position="end">days</InputAdornment>
+                    }}
+                    helperText="Send warning when expiring in X days"
+                    inputProps={{ min: 1, max: 365 }}
+                  />
+                </Grid>
+
+                {/* Alarm Threshold */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Alarm Threshold"
+                    value={(formData as any).certificate_config?.alarm_threshold_days || 7}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      certificate_config: {
+                        ...(prev as any).certificate_config,
+                        alarm_threshold_days: parseInt(e.target.value) || 7
+                      }
+                    }))}
+                    InputProps={{
+                      endAdornment: <InputAdornment position="end">days</InputAdornment>
+                    }}
+                    helperText="Send alarm when expiring in X days"
+                    inputProps={{ min: 1, max: 90 }}
+                  />
+                </Grid>
+
+                {/* Connection Timeout */}
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Connection Timeout"
+                    value={(formData as any).certificate_config?.timeout || 30}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      certificate_config: {
+                        ...(prev as any).certificate_config,
+                        timeout: parseInt(e.target.value) || 30
+                      }
+                    }))}
+                    InputProps={{
+                      endAdornment: <InputAdornment position="end">seconds</InputAdornment>
+                    }}
+                    helperText="Time to wait for connection"
+                    inputProps={{ min: 5, max: 120 }}
+                  />
+                </Grid>
+
+                {/* Check Certificate Chain */}
+                <Grid item xs={12} md={6}>
                   <FormControl fullWidth>
-                    <InputLabel>Daily Reminder Notifications</InputLabel>
+                    <InputLabel>Check Certificate Chain</InputLabel>
                     <Select
-                      value={(formData as any).alert_settings?.send_daily_reminder ? 'enabled' : 'disabled'}
-                      label="Daily Reminder Notifications"
+                      value={(formData as any).certificate_config?.check_chain !== false ? 'yes' : 'no'}
+                      label="Check Certificate Chain"
                       onChange={(e) => setFormData(prev => ({
                         ...prev,
-                        alert_settings: {
-                          ...(prev as any).alert_settings,
-                          enabled: true,
-                          send_daily_reminder: e.target.value === 'enabled'
+                        certificate_config: {
+                          ...(prev as any).certificate_config,
+                          check_chain: e.target.value === 'yes'
                         }
                       }))}
                     >
-                      <MenuItem value="enabled">
-                        📅 Enabled - Send daily alerts when critical
-                      </MenuItem>
-                      <MenuItem value="disabled">
-                        ❌ Disabled - Send alert only once
-                      </MenuItem>
+                      <MenuItem value="yes">Yes - Check entire chain</MenuItem>
+                      <MenuItem value="no">No - Check only main cert</MenuItem>
                     </Select>
                     <FormHelperText>
-                      When certificate is within alarm threshold (&lt; {(formData as any).certificate_config?.alarm_threshold_days || 7} days),
-                      send daily reminder emails to ensure timely renewal
+                      Verify intermediate certificates too
                     </FormHelperText>
                   </FormControl>
-                </Card>
-              </Grid>
+                </Grid>
 
-              {/* Threshold Presets */}
-              <Grid item xs={12}>
-                <Alert severity="success">
-                  <Typography variant="body2" gutterBottom>
-                    <strong>📊 Recommended Threshold Presets:</strong>
-                  </Typography>
-                  <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap', gap: 1 }}>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() => setFormData(prev => ({
-                        ...prev,
-                        certificate_config: {
-                          ...(prev as any).certificate_config,
-                          warning_threshold_days: 30,
-                          alarm_threshold_days: 7
-                        },
-                        period_in_minute: 60
-                      }))}
-                    >
-                      🔴 Production Critical (30/7 days)
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() => setFormData(prev => ({
-                        ...prev,
-                        certificate_config: {
-                          ...(prev as any).certificate_config,
-                          warning_threshold_days: 45,
-                          alarm_threshold_days: 14
-                        },
-                        period_in_minute: 360
-                      }))}
-                    >
-                      🟡 Standard (45/14 days)
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() => setFormData(prev => ({
-                        ...prev,
-                        certificate_config: {
-                          ...(prev as any).certificate_config,
-                          warning_threshold_days: 15,
-                          alarm_threshold_days: 5
-                        },
-                        period_in_minute: 1440
-                      }))}
-                    >
-                      🟢 Internal (15/5 days)
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() => setFormData(prev => ({
-                        ...prev,
-                        certificate_config: {
-                          ...(prev as any).certificate_config,
-                          warning_threshold_days: 30,
-                          alarm_threshold_days: 7
-                        },
-                        period_in_minute: 720
-                      }))}
-                    >
-                      🔵 Let's Encrypt (30/7 days)
-                    </Button>
-                  </Stack>
-                </Alert>
-              </Grid>
+                {/* Daily Reminders Toggle */}
+                <Grid item xs={12}>
+                  <Card variant="outlined" sx={{ p: 2, bgcolor: '#fef3c7' }}>
+                    <FormControl fullWidth>
+                      <InputLabel>Daily Reminder Notifications</InputLabel>
+                      <Select
+                        value={(formData as any).alert_settings?.send_daily_reminder ? 'enabled' : 'disabled'}
+                        label="Daily Reminder Notifications"
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          alert_settings: {
+                            ...(prev as any).alert_settings,
+                            enabled: true,
+                            send_daily_reminder: e.target.value === 'enabled'
+                          }
+                        }))}
+                      >
+                        <MenuItem value="enabled">
+                          📅 Enabled - Send daily alerts when critical
+                        </MenuItem>
+                        <MenuItem value="disabled">
+                          ❌ Disabled - Send alert only once
+                        </MenuItem>
+                      </Select>
+                      <FormHelperText>
+                        When certificate is within alarm threshold (&lt; {(formData as any).certificate_config?.alarm_threshold_days || 7} days),
+                        send daily reminder emails to ensure timely renewal
+                      </FormHelperText>
+                    </FormControl>
+                  </Card>
+                </Grid>
 
-              {/* Info Cards */}
-              <Grid item xs={12} md={6}>
-                <Card variant="outlined" sx={{ p: 2, height: '100%' }}>
-                  <Typography variant="subtitle2" gutterBottom color="primary">
-                    ✅ What Gets Checked
-                  </Typography>
-                  <Typography variant="caption" component="div" color="text.secondary">
-                    <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
-                      <li>Days until certificate expiration</li>
-                      <li>Certificate issuer and subject</li>
-                      <li>Subject Alternative Names (SANs)</li>
-                      <li>Certificate chain validity</li>
-                      <li>Hostname match verification</li>
-                      <li>Self-signed certificate detection</li>
-                    </ul>
-                  </Typography>
-                </Card>
-              </Grid>
+                {/* Threshold Presets */}
+                <Grid item xs={12}>
+                  <Alert severity="success">
+                    <Typography variant="body2" gutterBottom>
+                      <strong>📊 Recommended Threshold Presets:</strong>
+                    </Typography>
+                    <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap', gap: 1 }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          certificate_config: {
+                            ...(prev as any).certificate_config,
+                            warning_threshold_days: 30,
+                            alarm_threshold_days: 7
+                          },
+                          period_in_minute: 60
+                        }))}
+                      >
+                        🔴 Production Critical (30/7 days)
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          certificate_config: {
+                            ...(prev as any).certificate_config,
+                            warning_threshold_days: 45,
+                            alarm_threshold_days: 14
+                          },
+                          period_in_minute: 360
+                        }))}
+                      >
+                        🟡 Standard (45/14 days)
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          certificate_config: {
+                            ...(prev as any).certificate_config,
+                            warning_threshold_days: 15,
+                            alarm_threshold_days: 5
+                          },
+                          period_in_minute: 1440
+                        }))}
+                      >
+                        🟢 Internal (15/5 days)
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          certificate_config: {
+                            ...(prev as any).certificate_config,
+                            warning_threshold_days: 30,
+                            alarm_threshold_days: 7
+                          },
+                          period_in_minute: 720
+                        }))}
+                      >
+                        🔵 Let's Encrypt (30/7 days)
+                      </Button>
+                    </Stack>
+                  </Alert>
+                </Grid>
 
-              <Grid item xs={12} md={6}>
-                <Card variant="outlined" sx={{ p: 2, height: '100%' }}>
-                  <Typography variant="subtitle2" gutterBottom color="error">
-                    🚨 Alert Behavior
-                  </Typography>
-                  <Typography variant="caption" component="div" color="text.secondary">
-                    <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
-                      <li><strong>Warning:</strong> First alert at {(formData as any).certificate_config?.warning_threshold_days || 30} days</li>
-                      <li><strong>Alarm:</strong> Escalates at {(formData as any).certificate_config?.alarm_threshold_days || 7} days</li>
-                      <li><strong>Daily Reminders:</strong> When enabled, sends daily emails during alarm period</li>
-                      <li><strong>Expired:</strong> Immediate critical alert</li>
-                      <li><strong>Recovery:</strong> Notification sent when renewed</li>
-                    </ul>
-                  </Typography>
-                </Card>
-              </Grid>
+                {/* Info Cards */}
+                <Grid item xs={12} md={6}>
+                  <Card variant="outlined" sx={{ p: 2, height: '100%' }}>
+                    <Typography variant="subtitle2" gutterBottom color="primary">
+                      ✅ What Gets Checked
+                    </Typography>
+                    <Typography variant="caption" component="div" color="text.secondary">
+                      <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+                        <li>Days until certificate expiration</li>
+                        <li>Certificate issuer and subject</li>
+                        <li>Subject Alternative Names (SANs)</li>
+                        <li>Certificate chain validity</li>
+                        <li>Hostname match verification</li>
+                        <li>Self-signed certificate detection</li>
+                      </ul>
+                    </Typography>
+                  </Card>
+                </Grid>
 
-              {/* Examples */}
-              <Grid item xs={12}>
-                <Alert severity="info">
-                  <Typography variant="body2" gutterBottom>
-                    <strong>💡 Common Use Cases:</strong>
-                  </Typography>
-                  <Typography variant="caption" component="div">
-                    <ul style={{ marginTop: 4, marginBottom: 0, paddingLeft: 20 }}>
-                      <li><strong>E-commerce sites:</strong> Monitor checkout.example.com with 45/14 day thresholds</li>
-                      <li><strong>APIs:</strong> Monitor api.example.com with daily reminders enabled</li>
-                      <li><strong>CDN:</strong> Monitor cdn.example.com (wildcard cert covers *.example.com)</li>
-                      <li><strong>Internal services:</strong> Monitor internal-app.local:8443 (custom port)</li>
-                      <li><strong>Let's Encrypt:</strong> 90-day certs - set 30/7 day thresholds for buffer</li>
-                    </ul>
-                  </Typography>
-                </Alert>
-              </Grid>
+                <Grid item xs={12} md={6}>
+                  <Card variant="outlined" sx={{ p: 2, height: '100%' }}>
+                    <Typography variant="subtitle2" gutterBottom color="error">
+                      🚨 Alert Behavior
+                    </Typography>
+                    <Typography variant="caption" component="div" color="text.secondary">
+                      <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+                        <li><strong>Warning:</strong> First alert at {(formData as any).certificate_config?.warning_threshold_days || 30} days</li>
+                        <li><strong>Alarm:</strong> Escalates at {(formData as any).certificate_config?.alarm_threshold_days || 7} days</li>
+                        <li><strong>Daily Reminders:</strong> When enabled, sends daily emails during alarm period</li>
+                        <li><strong>Expired:</strong> Immediate critical alert</li>
+                        <li><strong>Recovery:</strong> Notification sent when renewed</li>
+                      </ul>
+                    </Typography>
+                  </Card>
+                </Grid>
 
-              {/* Testing Section */}
-              <Grid item xs={12}>
-                <Card variant="outlined" sx={{ p: 2, bgcolor: '#f0f9ff' }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    🧪 Test Before Saving
-                  </Typography>
-                  <Typography variant="caption" display="block" sx={{ mb: 1 }}>
-                    Test the certificate connection to verify your configuration:
-                  </Typography>
-                  <code style={{
-                    display: 'block',
-                    padding: '8px',
-                    background: '#1f2937',
-                    color: '#f3f4f6',
-                    borderRadius: '4px',
-                    fontSize: '11px',
-                    marginTop: '8px'
-                  }}>
-                    openssl s_client -connect {(formData as any).certificate_config?.hostname || 'example.com'}:{(formData as any).certificate_config?.port || 443} -servername {(formData as any).certificate_config?.hostname || 'example.com'} &lt; /dev/null 2&gt;/dev/null | openssl x509 -noout -dates
-                  </code>
-                </Card>
-              </Grid>
+                {/* Examples */}
+                <Grid item xs={12}>
+                  <Alert severity="info">
+                    <Typography variant="body2" gutterBottom>
+                      <strong>💡 Common Use Cases:</strong>
+                    </Typography>
+                    <Typography variant="caption" component="div">
+                      <ul style={{ marginTop: 4, marginBottom: 0, paddingLeft: 20 }}>
+                        <li><strong>E-commerce sites:</strong> Monitor checkout.example.com with 45/14 day thresholds</li>
+                        <li><strong>APIs:</strong> Monitor api.example.com with daily reminders enabled</li>
+                        <li><strong>CDN:</strong> Monitor cdn.example.com (wildcard cert covers *.example.com)</li>
+                        <li><strong>Internal services:</strong> Monitor internal-app.local:8443 (custom port)</li>
+                        <li><strong>Let's Encrypt:</strong> 90-day certs - set 30/7 day thresholds for buffer</li>
+                      </ul>
+                    </Typography>
+                  </Alert>
+                </Grid>
 
-              {/* Warning about check intervals */}
-              <Grid item xs={12}>
-                <Alert severity="warning">
-                  <Typography variant="body2">
-                    <strong>⏰ Important:</strong> For daily reminders to work effectively:
-                  </Typography>
-                  <Typography variant="caption" component="div">
-                    <ul style={{ marginTop: 4, marginBottom: 0, paddingLeft: 20 }}>
-                      <li>Set check period (below) to run at least once per day</li>
-                      <li>For critical certificates, check hourly (60 minutes) during alarm period</li>
-                      <li>Daily reminders will be sent 20+ hours after last notification</li>
-                      <li>Reminders continue until certificate is renewed or monitor is disabled</li>
-                    </ul>
-                  </Typography>
-                </Alert>
+                {/* Testing Section */}
+                <Grid item xs={12}>
+                  <Card variant="outlined" sx={{ p: 2, bgcolor: '#f0f9ff' }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      🧪 Test Before Saving
+                    </Typography>
+                    <Typography variant="caption" display="block" sx={{ mb: 1 }}>
+                      Test the certificate connection to verify your configuration:
+                    </Typography>
+                    <code style={{
+                      display: 'block',
+                      padding: '8px',
+                      background: '#1f2937',
+                      color: '#f3f4f6',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      marginTop: '8px'
+                    }}>
+                      openssl s_client -connect {(formData as any).certificate_config?.hostname || 'example.com'}:{(formData as any).certificate_config?.port || 443} -servername {(formData as any).certificate_config?.hostname || 'example.com'} &lt; /dev/null 2&gt;/dev/null | openssl x509 -noout -dates
+                    </code>
+                  </Card>
+                </Grid>
+
+                {/* Warning about check intervals */}
+                <Grid item xs={12}>
+                  <Alert severity="warning">
+                    <Typography variant="body2">
+                      <strong>⏰ Important:</strong> For daily reminders to work effectively:
+                    </Typography>
+                    <Typography variant="caption" component="div">
+                      <ul style={{ marginTop: 4, marginBottom: 0, paddingLeft: 20 }}>
+                        <li>Set check period (below) to run at least once per day</li>
+                        <li>For critical certificates, check hourly (60 minutes) during alarm period</li>
+                        <li>Daily reminders will be sent 20+ hours after last notification</li>
+                        <li>Reminders continue until certificate is renewed or monitor is disabled</li>
+                      </ul>
+                    </Typography>
+                  </Alert>
+                </Grid>
               </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        )
+      }
       {/* URL Settings */}
-      {formData.monitor_type === 'url' && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>URL Monitoring Settings</Typography>
-            <Divider sx={{ mb: 3 }} />
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Status Codes"
-                  value={statusCodeInput}
-                  onChange={(e) => setStatusCodeInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddStatusCode())}
-                  type="number"
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton onClick={handleAddStatusCode}><AddIcon /></IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {formData.status_code?.map((c, i) => (
-                    <Chip key={i} label={c} onDelete={() => handleRemoveStatusCode(i)} color="success" />
-                  ))}
-                </Box>
+      {
+        formData.monitor_type === 'url' && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>URL Monitoring Settings</Typography>
+              <Divider sx={{ mb: 3 }} />
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Status Codes"
+                    value={statusCodeInput}
+                    onChange={(e) => setStatusCodeInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddStatusCode())}
+                    type="number"
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton onClick={handleAddStatusCode}><AddIcon /></IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {formData.status_code?.map((c, i) => (
+                      <Chip key={i} label={c} onDelete={() => handleRemoveStatusCode(i)} color="success" />
+                    ))}
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Positive Pattern"
+                    value={formData.positive_pattern}
+                    onChange={handleChange('positive_pattern')}
+                    helperText="Regex that SHOULD appear"
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Negative Pattern"
+                    value={formData.negative_pattern}
+                    onChange={handleChange('negative_pattern')}
+                    helperText="Regex that SHOULD NOT appear"
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Positive Pattern"
-                  value={formData.positive_pattern}
-                  onChange={handleChange('positive_pattern')}
-                  helperText="Regex that SHOULD appear"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Negative Pattern"
-                  value={formData.negative_pattern}
-                  onChange={handleChange('negative_pattern')}
-                  helperText="Regex that SHOULD NOT appear"
-                />
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        )
+      }
 
       {/* API POST Settings */}
-      {formData.monitor_type === 'api_post' && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>API POST Settings</Typography>
-            <Divider sx={{ mb: 3 }} />
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={6}
-                  label="POST Body (JSON)"
-                  value={(formData as any).post_body || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, post_body: e.target.value }))}
-                  helperText="JSON body to send with POST request"
-                  placeholder='{"username": "test", "password": "test123"}'
-                />
+      {
+        formData.monitor_type === 'api_post' && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>API POST Settings</Typography>
+              <Divider sx={{ mb: 3 }} />
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={6}
+                    label="POST Body (JSON)"
+                    value={(formData as any).post_body || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, post_body: e.target.value }))}
+                    helperText="JSON body to send with POST request"
+                    placeholder='{"username": "test", "password": "test123"}'
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Expected Status Codes"
+                    value={statusCodeInput}
+                    onChange={(e) => setStatusCodeInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddStatusCode())}
+                    type="number"
+                    helperText="HTTP status codes (200, 201, etc.)"
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton onClick={handleAddStatusCode}><AddIcon /></IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {formData.status_code?.map((code, index) => (
+                      <Chip
+                        key={index}
+                        label={code}
+                        onDelete={() => handleRemoveStatusCode(index)}
+                        color="success"
+                      />
+                    ))}
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Positive Pattern"
+                    value={formData.positive_pattern}
+                    onChange={handleChange('positive_pattern')}
+                    helperText="Regex that SHOULD appear in response"
+                    placeholder='e.g., "success":true or token'
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Negative Pattern"
+                    value={formData.negative_pattern}
+                    onChange={handleChange('negative_pattern')}
+                    helperText="Regex that SHOULD NOT appear"
+                    placeholder='e.g., error|exception|failed'
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Expected Status Codes"
-                  value={statusCodeInput}
-                  onChange={(e) => setStatusCodeInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddStatusCode())}
-                  type="number"
-                  helperText="HTTP status codes (200, 201, etc.)"
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton onClick={handleAddStatusCode}><AddIcon /></IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {formData.status_code?.map((code, index) => (
-                    <Chip
-                      key={index}
-                      label={code}
-                      onDelete={() => handleRemoveStatusCode(index)}
-                      color="success"
-                    />
-                  ))}
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Positive Pattern"
-                  value={formData.positive_pattern}
-                  onChange={handleChange('positive_pattern')}
-                  helperText="Regex that SHOULD appear in response"
-                  placeholder='e.g., "success":true or token'
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Negative Pattern"
-                  value={formData.negative_pattern}
-                  onChange={handleChange('negative_pattern')}
-                  helperText="Regex that SHOULD NOT appear"
-                  placeholder='e.g., error|exception|failed'
-                />
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        )
+      }
 
       {/* SSH Settings */}
-      {formData.monitor_type === 'ssh' && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>SSH Configuration</Typography>
-            <Divider sx={{ mb: 3 }} />
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  required
-                  label="Host / IP Address"
-                  value={(formData as any).ssh_config?.host || ''}
-                  onChange={(e) => {
-                    const host = e.target.value;
-                    setFormData(prev => ({
+      {
+        formData.monitor_type === 'ssh' && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>SSH Configuration</Typography>
+              <Divider sx={{ mb: 3 }} />
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Host / IP Address"
+                    value={(formData as any).ssh_config?.host || ''}
+                    onChange={(e) => {
+                      const host = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        monitor_instance: host,
+                        ssh_config: { ...(prev as any).ssh_config, host }
+                      }));
+                    }}
+                    helperText="e.g., 192.168.1.100 or server.example.com"
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Port"
+                    value={(formData as any).ssh_config?.port || 22}
+                    onChange={(e) => setFormData(prev => ({
                       ...prev,
-                      monitor_instance: host,
-                      ssh_config: { ...(prev as any).ssh_config, host }
-                    }));
-                  }}
-                  helperText="e.g., 192.168.1.100 or server.example.com"
-                />
+                      ssh_config: { ...(prev as any).ssh_config, port: parseInt(e.target.value) }
+                    }))}
+                    helperText="Default: 22"
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Username"
+                    value={(formData as any).ssh_config?.username || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      ssh_config: { ...(prev as any).ssh_config, username: e.target.value }
+                    }))}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    type="password"
+                    label="Password"
+                    value={(formData as any).ssh_config?.password || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      ssh_config: { ...(prev as any).ssh_config, password: e.target.value }
+                    }))}
+                    helperText="SSH password"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Command or Script Path"
+                    value={(formData as any).ssh_config?.command || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      ssh_config: { ...(prev as any).ssh_config, command: e.target.value }
+                    }))}
+                    helperText="e.g., /home/user/scripts/check_resources.sh or uptime"
+                    placeholder="/opt/scripts/system_check.sh"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Alert severity="info">
+                    <Typography variant="body2" gutterBottom>
+                      <strong>Script Output Format:</strong>
+                    </Typography>
+                    <Typography variant="body2" component="div">
+                      Your script should output metrics in one of these formats:
+                      <ul style={{ marginTop: 8, marginBottom: 0 }}>
+                        <li>CPU: 90%</li>
+                        <li>Memory: 85%</li>
+                        <li>Disk: 75%</li>
+                      </ul>
+                      Or: <code>cpu=90 memory=85 disk=75</code>
+                    </Typography>
+                  </Alert>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Positive Pattern"
+                    value={formData.positive_pattern}
+                    onChange={handleChange('positive_pattern')}
+                    helperText="Regex that SHOULD appear (optional)"
+                    placeholder="success|ok|completed"
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Negative Pattern"
+                    value={formData.negative_pattern}
+                    onChange={handleChange('negative_pattern')}
+                    helperText="Regex that SHOULD NOT appear (optional)"
+                    placeholder="error|failed|exception"
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Port"
-                  value={(formData as any).ssh_config?.port || 22}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    ssh_config: { ...(prev as any).ssh_config, port: parseInt(e.target.value) }
-                  }))}
-                  helperText="Default: 22"
-                />
+            </CardContent>
+          </Card>
+        )
+      }
+
+      {/* GCP Configuration Section */}
+      {
+        formData.monitor_type === 'gcp' && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                ☁️ Google Cloud Platform Configuration
+              </Typography>
+              <Divider sx={{ mb: 3 }} />
+
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Monitor GCP resources with AI-powered root cause analysis
+              </Alert>
+
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Project ID"
+                    value={(formData as any).gcp_config?.project_id || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      gcp_config: { ...(prev as any).gcp_config, project_id: e.target.value }
+                    }))}
+                    helperText="Your GCP project ID"
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth required>
+                    <InputLabel>Resource Type</InputLabel>
+                    <Select
+                      value={(formData as any).gcp_config?.resource_type || ''}
+                      label="Resource Type"
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        gcp_config: { ...(prev as any).gcp_config, resource_type: e.target.value }
+                      }))}
+                    >
+                      <MenuItem value="compute">Compute Engine (VM)</MenuItem>
+                      <MenuItem value="cloudrun">Cloud Run</MenuItem>
+                      <MenuItem value="cloudfunctions">Cloud Functions</MenuItem>
+                      <MenuItem value="cloudsql">Cloud SQL</MenuItem>
+                      <MenuItem value="gke">Kubernetes Engine</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Resource ID"
+                    value={(formData as any).gcp_config?.resource_id || ''}
+                    onChange={(e) => {
+                      const resourceId = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        monitor_instance: resourceId,
+                        gcp_config: { ...(prev as any).gcp_config, resource_id: resourceId }
+                      }));
+                    }}
+                    helperText="Instance name or resource identifier"
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Region"
+                    value={(formData as any).gcp_config?.region || 'us-central1'}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      gcp_config: { ...(prev as any).gcp_config, region: e.target.value }
+                    }))}
+                    helperText="GCP region (e.g., us-central1)"
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Service Account Credentials Path"
+                    value={(formData as any).gcp_config?.credentials_path || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      gcp_config: { ...(prev as any).gcp_config, credentials_path: e.target.value }
+                    }))}
+                    helperText="Path to service account JSON key file"
+                    placeholder="/path/to/service-account.json"
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Alert severity="success">
+                    <Typography variant="body2" gutterBottom>
+                      <strong>🤖 AI-Powered Features:</strong>
+                    </Typography>
+                    <Typography variant="caption">
+                      Automatic root cause analysis, metric correlation, and intelligent recommendations
+                    </Typography>
+                  </Alert>
+                </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  required
-                  label="Username"
-                  value={(formData as any).ssh_config?.username || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    ssh_config: { ...(prev as any).ssh_config, username: e.target.value }
-                  }))}
-                />
+            </CardContent>
+          </Card>
+        )
+      }
+
+      {/* Azure Configuration Section */}
+      {
+        formData.monitor_type === 'azure' && (
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                🔷 Microsoft Azure Configuration
+              </Typography>
+              <Divider sx={{ mb: 3 }} />
+
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Monitor Azure resources with AI-powered analysis and cost insights
+              </Alert>
+
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Subscription ID"
+                    value={(formData as any).azure_config?.subscription_id || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      azure_config: { ...(prev as any).azure_config, subscription_id: e.target.value }
+                    }))}
+                    helperText="Azure subscription ID"
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Resource Group"
+                    value={(formData as any).azure_config?.resource_group || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      azure_config: { ...(prev as any).azure_config, resource_group: e.target.value }
+                    }))}
+                    helperText="Resource group name"
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <FormControl fullWidth required>
+                    <InputLabel>Resource Type</InputLabel>
+                    <Select
+                      value={(formData as any).azure_config?.resource_type || ''}
+                      label="Resource Type"
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        azure_config: { ...(prev as any).azure_config, resource_type: e.target.value }
+                      }))}
+                    >
+                      <MenuItem value="vm">Virtual Machine</MenuItem>
+                      <MenuItem value="appservice">App Service</MenuItem>
+                      <MenuItem value="function">Azure Function</MenuItem>
+                      <MenuItem value="sqldb">SQL Database</MenuItem>
+                      <MenuItem value="storage">Storage Account</MenuItem>
+                      <MenuItem value="aks">Kubernetes Service</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Resource Name"
+                    value={(formData as any).azure_config?.resource_name || ''}
+                    onChange={(e) => {
+                      const resourceName = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        monitor_instance: resourceName,
+                        azure_config: { ...(prev as any).azure_config, resource_name: resourceName }
+                      }));
+                    }}
+                    helperText="Resource name in Azure"
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Tenant ID"
+                    value={(formData as any).azure_config?.tenant_id || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      azure_config: { ...(prev as any).azure_config, tenant_id: e.target.value }
+                    }))}
+                    helperText="Azure AD tenant ID"
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    required
+                    label="Client ID"
+                    value={(formData as any).azure_config?.client_id || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      azure_config: { ...(prev as any).azure_config, client_id: e.target.value }
+                    }))}
+                    helperText="Application (client) ID"
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    required
+                    type="password"
+                    label="Client Secret"
+                    value={(formData as any).azure_config?.client_secret || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      azure_config: { ...(prev as any).azure_config, client_secret: e.target.value }
+                    }))}
+                    helperText="Application client secret"
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Alert severity="success">
+                    <Typography variant="body2" gutterBottom>
+                      <strong>🤖 AI-Powered Features:</strong>
+                    </Typography>
+                    <Typography variant="caption">
+                      Root cause analysis, cost optimization recommendations, and performance insights
+                    </Typography>
+                  </Alert>
+                </Grid>
               </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  required
-                  type="password"
-                  label="Password"
-                  value={(formData as any).ssh_config?.password || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    ssh_config: { ...(prev as any).ssh_config, password: e.target.value }
-                  }))}
-                  helperText="SSH password"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  required
-                  label="Command or Script Path"
-                  value={(formData as any).ssh_config?.command || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    ssh_config: { ...(prev as any).ssh_config, command: e.target.value }
-                  }))}
-                  helperText="e.g., /home/user/scripts/check_resources.sh or uptime"
-                  placeholder="/opt/scripts/system_check.sh"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Alert severity="info">
-                  <Typography variant="body2" gutterBottom>
-                    <strong>Script Output Format:</strong>
-                  </Typography>
-                  <Typography variant="body2" component="div">
-                    Your script should output metrics in one of these formats:
-                    <ul style={{ marginTop: 8, marginBottom: 0 }}>
-                      <li>CPU: 90%</li>
-                      <li>Memory: 85%</li>
-                      <li>Disk: 75%</li>
-                    </ul>
-                    Or: <code>cpu=90 memory=85 disk=75</code>
-                  </Typography>
-                </Alert>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Positive Pattern"
-                  value={formData.positive_pattern}
-                  onChange={handleChange('positive_pattern')}
-                  helperText="Regex that SHOULD appear (optional)"
-                  placeholder="success|ok|completed"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Negative Pattern"
-                  value={formData.negative_pattern}
-                  onChange={handleChange('negative_pattern')}
-                  helperText="Regex that SHOULD NOT appear (optional)"
-                  placeholder="error|failed|exception"
-                />
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        )
+      }
 
       {/* Thresholds */}
       <Card sx={{ mb: 3 }}>
@@ -1851,6 +2169,6 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
           {loading ? 'Saving...' : mode === 'create' ? 'Create Monitor' : 'Update Monitor'}
         </Button>
       </Stack>
-    </Box>
+    </Box >
   );
 }

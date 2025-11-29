@@ -2,7 +2,7 @@
 export interface Monitor {
   _id?: string;
   monitor_name: string;
-  monitor_type: 'url' | 'cpu' | 'memory' | 'system_availability' | 'disk' | 'custom';
+  monitor_type: 'url' | 'cpu' | 'memory' | 'system_availability' | 'disk' | 'custom' | 'ssh' | 'certificate' | 'gcp' | 'azure' | 'aws' | 'ping' | 'log' | 'api_post';
   creation_date_time: Date;
   created_by: string;
   business_owner: string;
@@ -13,6 +13,13 @@ export interface Monitor {
   monitor_instance: string;  // URL, system name, or app name
   ssh_config?: SshConfig;
   certificate_config?: CertificateConfig;
+  gcp_config?: GcpConfig;
+  azure_config?: AzureConfig;
+  aws_config?: AwsConfig;
+  ping_config?: PingConfig;
+  log_config?: LogConfig;
+  alert_settings?: AlertSettings;
+
   // Pattern matching for URL/response monitoring
   negative_pattern?: string;  // Pattern that should NOT appear
   positive_pattern?: string;  // Pattern that SHOULD appear
@@ -25,11 +32,6 @@ export interface Monitor {
   high_value_threshold_alarm?: number;
 
 
-  ping_config?: {
-    host?: string;      // IP or hostname (optional if monitor_instance is used)
-    count?: number;     // Number of packets (default: 4)
-    timeout?: number;   // Timeout in seconds (default: 5)
-  };
   // Consecutive checks
   consecutive_warning: number;
   consecutive_alarm: number;
@@ -88,6 +90,52 @@ export interface SshConfig {
   command: string;  // Command or script path to execute
 }
 
+export interface GcpConfig {
+  project_id: string;
+  resource_type: string;
+  resource_id: string;
+  region?: string;
+  credentials_path: string;
+}
+
+export interface AzureConfig {
+  subscription_id: string;
+  resource_group: string;
+  resource_type: string;
+  resource_name: string;
+  tenant_id: string;
+  client_id: string;
+  client_secret: string;
+}
+
+export interface AwsConfig {
+  access_key_id: string;
+  secret_access_key: string;
+  region: string;
+  service: string;
+  resource_id: string;
+  metric_name?: string;
+}
+
+export interface PingConfig {
+  host?: string;
+  count?: number;
+  timeout?: number;
+}
+
+export interface LogConfig {
+  log_path: string;
+  is_remote: boolean;
+  ssh_host?: string;
+  ssh_username?: string;
+  ssh_password?: string;
+}
+
+export interface AlertSettings {
+  // Define alert settings properties here if needed
+  [key: string]: any;
+}
+
 // Validation schema
 export const MonitorValidation = {
   monitor_name: {
@@ -97,7 +145,7 @@ export const MonitorValidation = {
   },
   monitor_type: {
     required: true,
-    enum: ['url', 'cpu', 'memory', 'system_availability', 'disk', 'custom']
+    enum: ['url', 'cpu', 'memory', 'system_availability', 'disk', 'custom', 'ssh', 'certificate', 'gcp', 'azure', 'aws', 'ping', 'log', 'api_post']
   },
   severity: {
     required: true,
