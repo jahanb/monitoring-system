@@ -479,8 +479,9 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
         </CardContent>
       </Card >
 
+
       {/* Alarming & Dependencies */}
-      < Card sx={{ mb: 3 }}>
+      <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>Alarming & Dependencies</Typography>
           <Divider sx={{ mb: 3 }} />
@@ -508,7 +509,6 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
                   <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
-                      required
                       size="small"
                       label="Email"
                       type="email"
@@ -516,6 +516,7 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
                       onChange={(e) => setAlarmingEmailInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddAlarmingCandidate())}
                       placeholder="john@example.com"
+                      helperText="Required to add a contact"
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
@@ -629,7 +630,7 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
             </Grid>
           </Grid>
         </CardContent>
-      </Card >
+      </Card>
 
       {/* AWS Settings */}
       {
