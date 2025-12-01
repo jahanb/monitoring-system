@@ -29,7 +29,8 @@ export class EmailService {
   async sendAlertEmail(
     recipient: string,
     monitor: Monitor,
-    alert: Partial<Alert>
+    alert: Partial<Alert>,
+    notificationType?: string
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
       console.log(`📧 Sending alert email to ${recipient}`);
@@ -64,10 +65,12 @@ export class EmailService {
   /**
    * Send recovery notification email
    */
+
   async sendRecoveryEmail(
     recipient: string,
     monitor: Monitor,
-    alert: any
+    alert: any,
+    notificationType?: string
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
       console.log(`📧 Sending recovery email to ${recipient}`);
@@ -105,7 +108,7 @@ export class EmailService {
   private formatAlertEmailHTML(monitor: Monitor, alert: Partial<Alert>): string {
     const severityColor = alert.severity === 'alarm' ? '#dc3545' : '#ffc107';
     const duration = this.formatDuration(alert.triggered_at);
-    
+
     // Check if there are solutions in metadata
     const solutions = alert.metadata?.solutions || [];
     const recentErrors = alert.metadata?.recentErrors || [];
@@ -258,12 +261,12 @@ export class EmailService {
     };
     return text.replace(/[&<>"']/g, (m) => map[m]);
   }
-  
 
-private formatAlertEmailText(monitor: Monitor, alert: Partial<Alert>): string {
-  const duration = this.formatDuration(alert.triggered_at);
 
-  return `
+  private formatAlertEmailText(monitor: Monitor, alert: Partial<Alert>): string {
+    const duration = this.formatDuration(alert.triggered_at);
+
+    return `
 🚨 ALERT TRIGGERED
 
 Monitor: ${monitor.monitor_name}
@@ -287,16 +290,16 @@ Monitor Information:
 This is an automated alert from the Monitoring System
 Do not reply to this email
   `.trim();
-}
+  }
 
   /**
    * Format recovery email as HTML
    */
 
-private formatRecoveryEmailHTML(monitor: Monitor, alert: any): string {
-  const duration = this.formatDuration(alert.triggered_at, alert.recovered_at);
+  private formatRecoveryEmailHTML(monitor: Monitor, alert: any): string {
+    const duration = this.formatDuration(alert.triggered_at, alert.recovered_at);
 
-  return `
+    return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -371,10 +374,10 @@ private formatRecoveryEmailHTML(monitor: Monitor, alert: any): string {
 </body>
 </html>
   `;
-}
+  }
 
 
- 
+
   private formatRecoveryEmailText(monitor: Monitor, alert: any): string {
     const duration = this.formatDuration(alert.triggered_at, alert.recovered_at);
 
@@ -407,19 +410,19 @@ Do not reply to this email
   }
 
 
-  
+
   private formatDuration(start?: Date, end?: Date): string {
     if (!start) return 'N/A';
-    
+
     const startTime = new Date(start).getTime();
     const endTime = end ? new Date(end).getTime() : Date.now();
     const duration = endTime - startTime;
-    
+
     const seconds = Math.floor(duration / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
-    
+
     if (days > 0) return `${days}d ${hours % 24}h ${minutes % 60}m`;
     if (hours > 0) return `${hours}h ${minutes % 60}m`;
     if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
@@ -429,7 +432,7 @@ Do not reply to this email
   /**
    * Test email connection
    */
-  
+
   async testConnection(): Promise<boolean> {
     try {
       await this.transporter.verify();
@@ -451,4 +454,3 @@ export function getEmailService(): EmailService {
   }
   return emailServiceInstance;
 }
-  

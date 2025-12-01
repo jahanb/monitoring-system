@@ -138,7 +138,7 @@ export class AlertManager {
       let existingAlert = await this.getExistingAlert(db, monitor._id);
 
       if (existingAlert) {
-        console.log(`   📝 Found existing alert ${existingAlert._id}`);
+        console.log(`   📝 Found existing alert ${existingAlert._id!.toString}`);
         console.log(`   Alert status: ${existingAlert.status}`);
         console.log(`   Previous consecutive failures: ${existingAlert.consecutive_failures || 0}`);
         console.log(`   Current consecutive failures: ${state.consecutive_failures || 0}`);
@@ -162,7 +162,7 @@ export class AlertManager {
 
         // Update existing alert
         await db.collection(Collections.ALERTS).updateOne(
-          { _id: existingAlert._id },
+          { _id: existingAlert._id!.toString() },
           {
             $set: {
               severity: result.status === 'alarm' ? 'alarm' : 'warning',
@@ -466,7 +466,7 @@ export class AlertManager {
     // Update alert with recovery notification logs
     if (notifications.length > 0) {
       await db.collection(Collections.ALERTS).updateOne(
-        { _id: alert._id },
+        { _id: alert._id!.toString() },
         { $push: { notifications_sent: { $each: notifications } } }
       );
     }

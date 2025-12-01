@@ -1,51 +1,66 @@
-// lib/models/Alert.ts
+// lib/models/Alert.ts - UPDATE THIS
+
+import { ObjectId } from 'mongodb';
 
 export interface Alert {
-  _id?: string;
+  _id?: ObjectId;
   monitor_id: string;
   monitor_name: string;
-  severity: 'warning' | 'alarm';
-  status: 'active' | 'recovered' | 'acknowledged' | 'in_recovery';
-
+  alert_type?: 'warning' | 'alarm' | 'critical' | 'recovery';
+  severity: 'low' | 'medium' | 'high' | 'critical' | 'alarm' | 'warning';  // Add 'alarm' and 'warning'
+  message: string;
+  value?: number;
+  current_value?: number;
+  threshold?: number;
+  threshold_value?: number;  // Add this - your DB uses threshold_value
+  consecutive_failures?: number;
+  status: 'active' | 'acknowledged' | 'resolved' | 'auto_resolved' | 'in_recovery' | 'recovered';
+  created_at?: Date;
   triggered_at: Date;
-  recovered_at?: Date;
+  updated_at?: Date;
+  last_updated?: Date;  // Add this - your DB uses last_updated
   acknowledged_at?: Date;
   acknowledged_by?: string;
-  acknowledge_note?: string;
-  last_notification_sent_at?: Date;
-  // Alert details
-  current_value: number;
-  threshold_value: number;
-  consecutive_failures: number;
-
-  // Recovery tracking
-  recovery_attempts: RecoveryAttempt[];
-
-  // Notifications tracking
-  notifications_sent: NotificationLog[];
-
-  message: string;
-  metadata?: any;
-}
-
-export interface NotificationLog {
-  channel: string;
-  recipient: string;
-  sent_at: Date;
-  status: 'sent' | 'failed';
-  message_id?: string;
-  error_message?: string;
-  notification_type?: 'new' | 'reminder' | 'escalation' | 'daily'; // ← ADD THIS
+  acknowledgment_note?: string;  // Add this field
+  resolved_at?: Date;
+  recovered_at?: Date;  // Add this - your DB uses recovered_at
+  resolved_by?: string;
+  notification_sent?: boolean;
+  notification_attempts?: number;
+  notifications_sent?: Array<{
+    type: string;
+    channel?: string;  // Add channel field
+    sent_at: Date;
+    recipient?: string;
+    success?: boolean;
+    status?: string;  // Add status field
+  }>;  // Add this - your DB has notifications_sent array
+  last_notification_at?: Date;
+  details?: any;
+  metadata?: any;  // Add this - your DB has metadata
+  recovery_sent?: boolean;
+  recovery_attempts?: Array<any>;  // Add this - your DB has recovery_attempts
 }
 
 export interface RecoveryAttempt {
-  attempt_number: number;
+  _id?: ObjectId;
+  alert_id: string;
+  monitor_id: string;
+  attempted_at: Date;
+  success: boolean;
   action: string;
-  started_at: Date;
-  completed_at?: Date;
-  status: 'running' | 'success' | 'failed';
-  error_message?: string;
-  logs?: string;
+  result?: string;
+  error?: string;
 }
 
-
+export interface NotificationLog {
+  _id?: ObjectId;
+  alert_id: string;
+  monitor_id: string;
+  sent_at: Date;
+  notification_type: 'email' | 'sms' | 'webhook' | 'slack';
+  recipients: string[];
+  success: boolean;
+  error?: string;
+  response?: any;
+}

@@ -94,7 +94,7 @@ export default function AlertsPage() {
 
         setActionLoading(true);
         try {
-            const response = await fetch(`/api/alerts/${selectedAlert._id}/acknowledge`, {
+            const response = await fetch(`/api/alerts/${selectedAlert._id?.toString}/acknowledge`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ note: acknowledgeNote })
@@ -308,7 +308,7 @@ export default function AlertsPage() {
                                     </TableRow>
                                 ) : (
                                     filteredAlerts.map((alert) => (
-                                        <TableRow key={alert._id} hover>
+                                        <TableRow key={alert._id!.toString()} hover>
                                             <TableCell>
                                                 <Chip
                                                     icon={getStatusIcon(alert.status)}
@@ -389,7 +389,7 @@ export default function AlertsPage() {
                                                                 <IconButton
                                                                     size="small"
                                                                     color="warning"
-                                                                    onClick={() => handleTriggerRecovery(alert._id!)}
+                                                                    onClick={() => handleTriggerRecovery(alert._id!.toString())}
                                                                     disabled={actionLoading}
                                                                 >
                                                                     <PlayArrowIcon fontSize="small" />
@@ -619,9 +619,9 @@ export default function AlertsPage() {
                                                                 <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
                                                                     By: {selectedAlert.acknowledged_by || 'Unknown'}
                                                                 </Typography>
-                                                                {selectedAlert.acknowledge_note && (
+                                                                {selectedAlert.acknowledgment_note && (
                                                                     <Typography variant="caption" display="block" sx={{ mt: 0.5, fontStyle: 'italic' }}>
-                                                                        Note: {selectedAlert.acknowledge_note}
+                                                                        Note: {selectedAlert.acknowledgment_note}
                                                                     </Typography>
                                                                 )}
                                                             </Box>
@@ -895,7 +895,7 @@ export default function AlertsPage() {
                                             Acknowledge
                                         </Button>
                                         <Button
-                                            onClick={() => handleTriggerRecovery(selectedAlert._id!)}
+                                            onClick={() => handleTriggerRecovery(selectedAlert._id!.toString())}
                                             color="warning"
                                             variant="contained"
                                             startIcon={<PlayArrowIcon />}

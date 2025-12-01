@@ -9,6 +9,8 @@ import { AwsChecker } from './checkers/AwsChecker';
 import { PingChecker } from './checkers/PingChecker';
 import { GoogleCloudChecker } from './checkers/GoogleCloudChecker';
 import { AzureChecker } from './checkers/AzureChecker';
+import { DockerChecker } from './checkers/DockerChecker';
+
 export function registerAllCheckers() {
   console.log('🔧 Registering all checkers...');
 
@@ -20,6 +22,7 @@ export function registerAllCheckers() {
   CheckerRegistry.register(new LogChecker());
   CheckerRegistry.register(new GoogleCloudChecker());
   CheckerRegistry.register(new AzureChecker());
+  CheckerRegistry.register(new DockerChecker());
 
   console.log(`✅ Registered ${CheckerRegistry.getRegisteredTypes().length} checkers`);
   console.log(`📋 Available: ${CheckerRegistry.getRegisteredTypes().join(', ')}`);

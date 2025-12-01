@@ -2,7 +2,7 @@
 export interface Monitor {
   _id?: string;
   monitor_name: string;
-  monitor_type: 'url' | 'cpu' | 'memory' | 'system_availability' | 'disk' | 'custom' | 'ssh' | 'certificate' | 'gcp' | 'azure' | 'aws' | 'ping' | 'log' | 'api_post';
+  monitor_type: 'url' | 'cpu' | 'memory' | 'system_availability' | 'disk' | 'custom' | 'ssh' | 'docker' | 'certificate' | 'gcp' | 'azure' | 'aws' | 'ping' | 'log' | 'api_post';
   creation_date_time: Date;
   created_by: string;
   business_owner: string;
@@ -50,6 +50,47 @@ export interface Monitor {
 
   // Maintenance
   maintenance_windows?: MaintenanceWindow[];
+
+  docker_config?: {
+    connection_type: 'local' | 'remote' | 'tcp';
+
+    // SSH connection (for remote)
+    ssh_host?: string;
+    ssh_port?: number;
+    ssh_username?: string;
+    ssh_password?: string;
+    ssh_private_key?: string;
+    ssh_passphrase?: string;
+
+    // TCP connection
+    docker_host?: string;
+    docker_port?: number;
+    docker_tls?: boolean;
+    docker_cert_path?: string;
+
+    // Container selection
+    container_name?: string;
+    container_id?: string;
+    image_name?: string;
+
+    // Monitoring options
+    check_status?: boolean;
+    check_health?: boolean;
+    check_restart_count?: boolean;
+    check_cpu?: boolean;
+    check_memory?: boolean;
+    check_disk?: boolean;
+    check_network?: boolean;
+
+    // Thresholds
+    max_restart_count?: number;
+    cpu_warning?: number;
+    cpu_critical?: number;
+    memory_warning?: number;
+    memory_critical?: number;
+    disk_warning?: number;
+    disk_critical?: number;
+  }
 
   // Status
   active_disable: boolean;  // true = active, false = disabled
