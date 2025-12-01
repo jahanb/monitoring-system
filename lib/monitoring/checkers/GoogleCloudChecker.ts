@@ -3,8 +3,7 @@
 import { Monitor } from '@/lib/models/Monitor';
 import { IChecker, CheckResult, createErrorResult } from '../types';
 import { logger } from '@/lib/logger';
-import { Monitoring } from '@google-cloud/monitoring';
-
+import { MetricServiceClient } from '@google-cloud/monitoring';
 /**
  * GoogleCloudChecker
  * Monitors Google Cloud Platform resources using Cloud Monitoring API
@@ -26,8 +25,8 @@ import { Monitoring } from '@google-cloud/monitoring';
  */
 export class GoogleCloudChecker implements IChecker {
     readonly type = 'gcp';
-    private client: any;
 
+    private client = new MetricServiceClient();
     async check(monitor: Monitor): Promise<CheckResult> {
         const startTime = Date.now();
 
@@ -47,7 +46,7 @@ export class GoogleCloudChecker implements IChecker {
             logger.info(`☁️ Checking GCP resource: ${config.resourceType}/${config.resourceId}`);
 
             // Initialize GCP Monitoring client
-            this.client = new Monitoring.MetricServiceClient({
+            this.client = new MetricServiceClient({
                 projectId: config.projectId,
                 keyFilename: config.credentialsPath
             });
