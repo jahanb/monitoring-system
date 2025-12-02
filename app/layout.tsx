@@ -8,7 +8,7 @@ import theme from '@/lib/theme';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Monitoring System',
+  title: 'System Up Monitoring System',
   description: 'Comprehensive monitoring and alerting system',
 };
 

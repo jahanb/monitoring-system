@@ -36,7 +36,7 @@ export default function DashboardPage() {
 
   const fetchData = async () => {
     try {
-      const response = await fetch('/api/dashboard');
+      const response = await fetch('/systemup/api/dashboard');
       const result = await response.json();
       if (response.ok) {
         setData(result.data);

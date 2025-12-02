@@ -38,7 +38,7 @@ export default function MonitorsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
+
   // Duplicate dialog state
   const [duplicateDialog, setDuplicateDialog] = useState(false);
   const [monitorToDuplicate, setMonitorToDuplicate] = useState<Monitor | null>(null);
@@ -49,9 +49,9 @@ export default function MonitorsPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/monitors');
+      const response = await fetch('/systemup/api/monitors');
       const data = await response.json();
-      
+
       if (response.ok) {
         // Handle both possible response formats
         setMonitors(data.data || data.monitors || []);
@@ -71,7 +71,7 @@ export default function MonitorsPage() {
     }
 
     try {
-      const response = await fetch(`/api/monitors/${id}`, {
+      const response = await fetch(`/systemup/api/monitors/${id}`, {
         method: 'DELETE'
       });
 
@@ -101,7 +101,7 @@ export default function MonitorsPage() {
     }
 
     setDuplicating(true);
-    
+
     try {
       // Create a copy of the monitor without _id and with new name
       const duplicatedMonitor: any = {
@@ -125,7 +125,7 @@ export default function MonitorsPage() {
         }
       });
 
-      const response = await fetch('/api/monitors', {
+      const response = await fetch('/systemup/api/monitors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(duplicatedMonitor)
@@ -139,10 +139,10 @@ export default function MonitorsPage() {
 
       setSuccess(`Monitor duplicated successfully! Redirecting to edit...`);
       setDuplicateDialog(false);
-      
+
       // Get the new monitor ID from response
       const newMonitorId = data.monitor?._id || data.data?._id || data.id;
-      
+
       // Redirect to edit page after 1 second
       setTimeout(() => {
         if (newMonitorId) {
@@ -152,7 +152,7 @@ export default function MonitorsPage() {
           fetchMonitors();
         }
       }, 1000);
-      
+
     } catch (err: any) {
       setError(err.message);
       setDuplicating(false);
@@ -162,33 +162,33 @@ export default function MonitorsPage() {
   const handleExecuteNow = async (id: string, name: string) => {
     try {
       setSuccess(`Executing ${name}...`);
-      
-      const response = await fetch('/api/monitors/execute', {
+
+      const response = await fetch('/systemup/api/monitors/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ monitor_id: id })
       });
 
       if (!response.ok) throw new Error('Failed to execute monitor');
-      
+
       const data = await response.json();
-      
+
       if (data.result?.success) {
         setSuccess(`${name} executed successfully - Status: ${data.result.status}`);
       } else {
         setError(`${name} failed - ${data.result?.message || 'Unknown error'}`);
       }
-      
+
       // Refresh monitors to show updated status
       setTimeout(() => {
         fetchMonitors();
       }, 2000);
-      
+
       setTimeout(() => {
         setSuccess(null);
         setError(null);
       }, 5000);
-      
+
     } catch (err: any) {
       setError(err.message);
     }
@@ -327,8 +327,8 @@ export default function MonitorsPage() {
                             label={`Last: ${monitor.last_check_status}`}
                             color={
                               monitor.last_check_status === 'ok' ? 'success' :
-                              monitor.last_check_status === 'warning' ? 'warning' :
-                              monitor.last_check_status === 'alarm' ? 'error' : 'default'
+                                monitor.last_check_status === 'warning' ? 'warning' :
+                                  monitor.last_check_status === 'alarm' ? 'error' : 'default'
                             }
                             size="small"
                             variant="outlined"
@@ -373,7 +373,7 @@ export default function MonitorsPage() {
                           <PlayIcon />
                         </IconButton>
                       </Tooltip>
-                      
+
                       <Tooltip title="Duplicate">
                         <IconButton
                           size="small"
@@ -383,7 +383,7 @@ export default function MonitorsPage() {
                           <DuplicateIcon />
                         </IconButton>
                       </Tooltip>
-                      
+
                       <Tooltip title="Edit">
                         <IconButton
                           size="small"
@@ -393,7 +393,7 @@ export default function MonitorsPage() {
                           <EditIcon />
                         </IconButton>
                       </Tooltip>
-                      
+
                       <Tooltip title="Delete">
                         <IconButton
                           size="small"
@@ -425,7 +425,7 @@ export default function MonitorsPage() {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Create a copy of <strong>{monitorToDuplicate?.monitor_name}</strong>
             </Typography>
-            
+
             <TextField
               fullWidth
               label="New Monitor Name"

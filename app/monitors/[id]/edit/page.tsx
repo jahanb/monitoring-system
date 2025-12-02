@@ -22,9 +22,9 @@ export default function EditMonitorPage({ params }: PageProps) {
     const fetchMonitor = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
-        const response = await fetch(`/api/monitors/${params.id}`);
+        const response = await fetch(`/systemup/api/monitors/${params.id}`);
         const data = await response.json();
 
         if (response.ok) {
@@ -68,10 +68,10 @@ export default function EditMonitorPage({ params }: PageProps) {
 
         {!loading && !error && monitor && (
           <Paper elevation={0} sx={{ mt: 3 }}>
-            <MonitorForm 
-              mode="edit" 
+            <MonitorForm
+              mode="edit"
               monitorId={params.id}
-              initialData={monitor} 
+              initialData={monitor}
             />
           </Paper>
         )}

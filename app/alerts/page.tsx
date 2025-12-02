@@ -77,7 +77,7 @@ export default function AlertsPage() {
 
     const fetchAlerts = async () => {
         try {
-            const response = await fetch('/api/alerts');
+            const response = await fetch('/systemup/api/alerts');
             if (!response.ok) throw new Error('Failed to fetch alerts');
             const data = await response.json();
             setAlerts(data.alerts || []);
@@ -94,7 +94,7 @@ export default function AlertsPage() {
 
         setActionLoading(true);
         try {
-            const response = await fetch(`/api/alerts/${selectedAlert._id?.toString}/acknowledge`, {
+            const response = await fetch(`/systemup/api/alerts/${selectedAlert._id?.toString}/acknowledge`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ note: acknowledgeNote })
@@ -116,7 +116,7 @@ export default function AlertsPage() {
     const handleTriggerRecovery = async (alertId: string) => {
         setActionLoading(true);
         try {
-            const response = await fetch(`/api/alerts/${alertId}/recover`, {
+            const response = await fetch(`/systemup/api/alerts/${alertId}/recover`, {
                 method: 'POST'
             });
 

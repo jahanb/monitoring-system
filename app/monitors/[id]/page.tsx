@@ -40,8 +40,8 @@ export default function MonitorDetailPage({ params }: { params: { id: string } }
   const fetchData = async () => {
     try {
       const [monitorRes, metricsRes] = await Promise.all([
-        fetch(`/api/monitors/${params.id}`),
-        fetch(`/api/monitors/${params.id}/metrics?hours=${timeRange}`)
+        fetch(`/systemup/api/monitors/${params.id}`),
+        fetch(`/systemup/api/monitors/${params.id}/metrics?hours=${timeRange}`)
       ]);
 
       const monitorData = await monitorRes.json();
@@ -176,7 +176,7 @@ export default function MonitorDetailPage({ params }: { params: { id: string } }
                   Uptime
                 </Typography>
                 <Typography variant="h5">
-                  {metrics.length > 0 
+                  {metrics.length > 0
                     ? ((metrics.filter(m => m.status === 'ok').length / metrics.length) * 100).toFixed(1) + '%'
                     : 'N/A'
                   }

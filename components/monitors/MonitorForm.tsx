@@ -195,7 +195,7 @@ export default function MonitorForm({ initialData, mode, monitorId }: MonitorFor
     setLoading(true);
 
     try {
-      const url = mode === 'create' ? '/api/monitors' : `/api/monitors/${monitorId}`;
+      const url = mode === 'create' ? '/systemup/api/monitors' : `/systemup/api/monitors/${monitorId}`;
       const method = mode === 'create' ? 'POST' : 'PUT';
 
       const response = await fetch(url, {

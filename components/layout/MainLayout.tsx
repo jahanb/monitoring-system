@@ -60,7 +60,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
     <div>
       <Toolbar>
         <Typography variant="h6" noWrap component="div">
-          Monitoring System
+          Monitoring Menu
         </Typography>
       </Toolbar>
       <Divider />
@@ -101,7 +101,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div">
-            Monitoring Dashboard
+            System Up Monitoring
           </Typography>
         </Toolbar>
       </AppBar>
