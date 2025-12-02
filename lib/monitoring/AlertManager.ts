@@ -380,9 +380,15 @@ export class AlertManager {
             channel: 'email',
             recipient: email,
             sent_at: new Date(),
-            status: result.success ? 'sent' : 'failed',
-            message_id: result.messageId,
-            error_message: result.error
+            status: result.success ? 'sent' : 'failed'
+            //    message_id: result.messageId,
+            //    error_message: result.error
+            ,
+            alert_id: '',
+            monitor_id: '',
+            notification_type: 'email',
+            recipients: [],
+            success: false
           };
 
           notifications.push(notification);
@@ -399,8 +405,14 @@ export class AlertManager {
             channel: 'email',
             recipient: email,
             sent_at: new Date(),
-            status: 'failed',
-            error_message: error.message
+            status: 'failed'
+            //   error_message: error.message
+            ,
+            alert_id: '',
+            monitor_id: '',
+            notification_type: 'email',
+            recipients: [],
+            success: false
           });
         }
       }
@@ -451,9 +463,15 @@ export class AlertManager {
           channel: 'email',
           recipient: email,
           sent_at: new Date(),
-          status: result.success ? 'sent' : 'failed',
-          message_id: result.messageId,
-          error_message: result.error
+          status: result.success ? 'sent' : 'failed'
+          //message_id: result.messageId,
+          // error_message: result.error
+          ,
+          alert_id: '',
+          monitor_id: '',
+          notification_type: 'email',
+          recipients: [],
+          success: false
         };
 
         notifications.push(notification);
@@ -471,6 +489,7 @@ export class AlertManager {
       );
     }
   }
+
 
   /**
    * Reset alert state for a specific monitor

@@ -57,10 +57,13 @@ export interface NotificationLog {
   _id?: ObjectId;
   alert_id: string;
   monitor_id: string;
+  channel?: string;  // Add this field
+  recipient?: string;  // Add this field
   sent_at: Date;
   notification_type: 'email' | 'sms' | 'webhook' | 'slack';
   recipients: string[];
   success: boolean;
+  status?: string;  // Add this field
   error?: string;
   response?: any;
 }
