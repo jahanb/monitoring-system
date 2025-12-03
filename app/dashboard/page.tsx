@@ -2,6 +2,7 @@
 
 'use client';
 import { useEffect, useState } from 'react';
+import SchedulerControl from '@/components/dashboard/SchedulerControl';
 import {
   Box,
   Typography,
@@ -12,7 +13,8 @@ import {
   CardContent,
   Stack,
   IconButton,
-  Chip
+  Chip,
+  Container
 } from '@mui/material';
 import {
   DataGrid,
@@ -167,114 +169,125 @@ export default function DashboardPage() {
   }
 
   return (
-    <MainLayout>
-      <Box>
-        <Typography variant="h4" gutterBottom>
-          Monitoring Dashboard
-        </Typography>
-
-        {/* Status Overview */}
-        <Grid container spacing={3} mb={4}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Stack direction="row" alignItems="center" spacing={2}>
-                  <CheckCircle color="success" fontSize="large" />
-                  <Box>
-                    <Typography variant="h4">{data.statusCounts.ok}</Typography>
-                    <Typography color="textSecondary">Healthy</Typography>
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Stack direction="row" alignItems="center" spacing={2}>
-                  <Warning color="warning" fontSize="large" />
-                  <Box>
-                    <Typography variant="h4">{data.statusCounts.warning}</Typography>
-                    <Typography color="textSecondary">Warning</Typography>
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Stack direction="row" alignItems="center" spacing={2}>
-                  <ErrorIcon color="error" fontSize="large" />
-                  <Box>
-                    <Typography variant="h4">{data.statusCounts.alarm}</Typography>
-                    <Typography color="textSecondary">Critical</Typography>
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Stack direction="row" alignItems="center" spacing={2}>
-                  <ErrorIcon fontSize="large" />
-                  <Box>
-                    <Typography variant="h4">{data.statusCounts.error}</Typography>
-                    <Typography color="textSecondary">Error</Typography>
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        {/* Monitor Table */}
-        <Card>
-          <CardContent>
-            <Typography variant="h5" gutterBottom>
-              All Monitors
-            </Typography>
-            <Box sx={{ height: 600, width: '100%' }}>
-              <DataGrid
-                rows={data.monitors}
-                columns={columns}
-                getRowId={(row) => row._id}
-                initialState={{
-                  pagination: {
-                    paginationModel: { pageSize: 10 }
-                  }
-                }}
-                pageSizeOptions={[10, 25, 50, 100]}
-                disableRowSelectionOnClick
-              />
-            </Box>
-          </CardContent>
-        </Card>
-
-        {/* Active Alerts */}
-        {data.activeAlerts.length > 0 && (
-          <Box mt={4}>
-            <Typography variant="h5" gutterBottom>
-              Active Alerts
-            </Typography>
-            <Stack spacing={2}>
-              {data.activeAlerts.map((alert: any) => (
-                <Alert
-                  key={alert._id}
-                  severity={alert.severity === 'alarm' ? 'error' : 'warning'}
-                >
-                  <Typography variant="subtitle2">{alert.monitor_name}</Typography>
-                  <Typography variant="body2">{alert.message}</Typography>
-                  <Typography variant="caption" color="textSecondary">
-                    Triggered: {new Date(alert.triggered_at).toLocaleString()}
-                  </Typography>
-                </Alert>
-              ))}
-            </Stack>
-          </Box>
-        )}
+    <><Container maxWidth="xl">
+      <Box sx={{
+        mt: 8,
+        mb: 4,
+        display: 'flex',
+        justifyContent: 'center'
+      }}>
+        <Box sx={{ width: '100%', maxWidth: 500 }}>
+          <SchedulerControl />
+        </Box>
       </Box>
-    </MainLayout>
+    </Container>
+      <MainLayout>
+        <Box>
+          <Typography variant="h4" gutterBottom>
+            Monitoring Dashboard
+          </Typography>
+
+          {/* Status Overview */}
+          <Grid container spacing={3} mb={4}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Stack direction="row" alignItems="center" spacing={2}>
+                    <CheckCircle color="success" fontSize="large" />
+                    <Box>
+                      <Typography variant="h4">{data.statusCounts.ok}</Typography>
+                      <Typography color="textSecondary">Healthy</Typography>
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Stack direction="row" alignItems="center" spacing={2}>
+                    <Warning color="warning" fontSize="large" />
+                    <Box>
+                      <Typography variant="h4">{data.statusCounts.warning}</Typography>
+                      <Typography color="textSecondary">Warning</Typography>
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Stack direction="row" alignItems="center" spacing={2}>
+                    <ErrorIcon color="error" fontSize="large" />
+                    <Box>
+                      <Typography variant="h4">{data.statusCounts.alarm}</Typography>
+                      <Typography color="textSecondary">Critical</Typography>
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Stack direction="row" alignItems="center" spacing={2}>
+                    <ErrorIcon fontSize="large" />
+                    <Box>
+                      <Typography variant="h4">{data.statusCounts.error}</Typography>
+                      <Typography color="textSecondary">Error</Typography>
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+
+          {/* Monitor Table */}
+          <Card>
+            <CardContent>
+              <Typography variant="h5" gutterBottom>
+                All Monitors
+              </Typography>
+              <Box sx={{ height: 600, width: '100%' }}>
+                <DataGrid
+                  rows={data.monitors}
+                  columns={columns}
+                  getRowId={(row) => row._id}
+                  initialState={{
+                    pagination: {
+                      paginationModel: { pageSize: 10 }
+                    }
+                  }}
+                  pageSizeOptions={[10, 25, 50, 100]}
+                  disableRowSelectionOnClick />
+              </Box>
+            </CardContent>
+          </Card>
+
+          {/* Active Alerts */}
+          {data.activeAlerts.length > 0 && (
+            <Box mt={4}>
+              <Typography variant="h5" gutterBottom>
+                Active Alerts
+              </Typography>
+              <Stack spacing={2}>
+                {data.activeAlerts.map((alert: any) => (
+                  <Alert
+                    key={alert._id}
+                    severity={alert.severity === 'alarm' ? 'error' : 'warning'}
+                  >
+                    <Typography variant="subtitle2">{alert.monitor_name}</Typography>
+                    <Typography variant="body2">{alert.message}</Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      Triggered: {new Date(alert.triggered_at).toLocaleString()}
+                    </Typography>
+                  </Alert>
+                ))}
+              </Stack>
+            </Box>
+          )}
+        </Box>
+      </MainLayout></>
   );
 }
