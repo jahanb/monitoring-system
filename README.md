@@ -78,6 +78,5 @@ Channels Available:
 
 SMS Alerts - Add Twilio for critical alerts
 Webhooks - Send to Slack/Teams/Discord
-Dashboard Charts - Add graphs for response times
 Alert Escalation - Escalate if not acknowledged within X minutes
 On-Call Schedule - Rotate who gets alerts
