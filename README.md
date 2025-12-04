@@ -74,23 +74,8 @@ Channels Available:
 💬 Slack
 🔗 Webhook
 
-┌─────────────────────────────────────────┐
-│ 🔔 Default Notification Channels       │
-├─────────────────────────────────────────┤
-│ Warning Channels: [📧 Email]           │
-│ Alarm Channels:   [📧 Email] [📱 SMS]  │
-└─────────────────────────────────────────┘
-Per-Contact Preferences:
-┌──────────────────────────────────────────┐
-│ Name: John Doe                     [×]   │
-│ 📧 john@example.com  📱 +1234567890     │
-│                                          │
-│ 🟡 Warning: [📧 Email]                  │
-│ 🔴 Alarm: [📧 Email] [📱 SMS] [📞 Call]│
-└──────────────────────────────────────────┘
 🚀 Next Steps (Optional Enhancements):
 
-Email Notifications - Integrate SendGrid/AWS SES for actual emails
 SMS Alerts - Add Twilio for critical alerts
 Webhooks - Send to Slack/Teams/Discord
 Dashboard Charts - Add graphs for response times
