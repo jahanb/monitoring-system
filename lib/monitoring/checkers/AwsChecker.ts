@@ -2,15 +2,15 @@
 
 import { Monitor } from '@/lib/models/Monitor';
 import { IChecker, CheckResult, createErrorResult, determineStatus } from '../types';
-import { 
-  CloudWatchClient, 
+import {
+  CloudWatchClient,
   GetMetricStatisticsCommand,
-  GetMetricStatisticsCommandInput 
+  GetMetricStatisticsCommandInput
 } from '@aws-sdk/client-cloudwatch';
-import { 
-  EC2Client, 
+import {
+  EC2Client,
   DescribeInstancesCommand,
-  DescribeInstanceStatusCommand 
+  DescribeInstanceStatusCommand
 } from '@aws-sdk/client-ec2';
 
 /**
@@ -27,7 +27,7 @@ export class AwsChecker implements IChecker {
 
     try {
       const awsConfig = this.parseAwsConfig(monitor);
-      
+
       if (!awsConfig.valid) {
         return {
           success: false,
@@ -58,8 +58,8 @@ export class AwsChecker implements IChecker {
       const responseTime = Date.now() - startTime;
 
       // Determine status based on primary metric
-      const primaryValue = metrics.cpu || metrics.memory || metrics.statusCheckFailed || 0;
-      
+      const primaryValue = (metrics as any).cpu || (metrics as any).memory || (metrics as any).statusCheckFailed || 0;
+
       const status = determineStatus(primaryValue, {
         lowWarning: monitor.low_value_threshold_warning,
         highWarning: monitor.high_value_threshold_warning,
@@ -90,14 +90,14 @@ export class AwsChecker implements IChecker {
 
   validate(monitor: Monitor): boolean | string {
     const aws = (monitor as any).aws_config;
-    
+
     if (!aws) return 'AWS configuration is required';
     if (!aws.access_key_id) return 'AWS Access Key ID is required';
     if (!aws.secret_access_key) return 'AWS Secret Access Key is required';
     if (!aws.region) return 'AWS Region is required';
     if (!aws.service) return 'AWS Service is required';
     if (!aws.resource_id) return 'Resource ID is required';
-    
+
     return true;
   }
 
@@ -105,7 +105,7 @@ export class AwsChecker implements IChecker {
     const aws = (monitor as any).aws_config;
 
     if (!aws) {
-    return { valid: false, error: 'AWS config missing', region: '', service: '', resourceId: '', accessKeyId: '', secretAccessKey: '' };
+      return { valid: false, error: 'AWS config missing', region: '', service: '', resourceId: '', accessKeyId: '', secretAccessKey: '' };
     }
 
     return {
@@ -160,8 +160,8 @@ export class AwsChecker implements IChecker {
 
     const metricsResponse = await cloudwatchClient.send(metricsCommand);
     const datapoints = metricsResponse.Datapoints || [];
-    
-    const latestDatapoint = datapoints.sort((a, b) => 
+
+    const latestDatapoint = datapoints.sort((a, b) =>
       (b.Timestamp?.getTime() || 0) - (a.Timestamp?.getTime() || 0)
     )[0];
 
@@ -170,8 +170,8 @@ export class AwsChecker implements IChecker {
       instanceState: instanceStatus?.InstanceState?.Name || 'unknown',
       systemStatus: instanceStatus?.SystemStatus?.Status || 'unknown',
       instanceStatus: instanceStatus?.InstanceStatus?.Status || 'unknown',
-      statusCheckFailed: instanceStatus?.SystemStatus?.Status === 'ok' && 
-                         instanceStatus?.InstanceStatus?.Status === 'ok' ? 0 : 1
+      statusCheckFailed: instanceStatus?.SystemStatus?.Status === 'ok' &&
+        instanceStatus?.InstanceStatus?.Status === 'ok' ? 0 : 1
     };
   }
 
@@ -199,8 +199,8 @@ export class AwsChecker implements IChecker {
 
     const metricsResponse = await cloudwatchClient.send(metricsCommand);
     const datapoints = metricsResponse.Datapoints || [];
-    
-    const latestDatapoint = datapoints.sort((a, b) => 
+
+    const latestDatapoint = datapoints.sort((a, b) =>
       (b.Timestamp?.getTime() || 0) - (a.Timestamp?.getTime() || 0)
     )[0];
 
@@ -234,8 +234,8 @@ export class AwsChecker implements IChecker {
 
     const metricsResponse = await cloudwatchClient.send(metricsCommand);
     const datapoints = metricsResponse.Datapoints || [];
-    
-    const latestDatapoint = datapoints.sort((a, b) => 
+
+    const latestDatapoint = datapoints.sort((a, b) =>
       (b.Timestamp?.getTime() || 0) - (a.Timestamp?.getTime() || 0)
     )[0];
 

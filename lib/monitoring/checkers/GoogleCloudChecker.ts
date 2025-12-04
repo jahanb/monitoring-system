@@ -211,7 +211,7 @@ export class GoogleCloudChecker implements IChecker {
 
         return {
             current: values[0] || 0,
-            average: values.reduce((a, b) => a + b, 0) / values.length,
+            average: values.reduce((a: number, b: number) => a + b, 0) / values.length,
             max: Math.max(...values),
             min: Math.min(...values),
             samples: values.length,

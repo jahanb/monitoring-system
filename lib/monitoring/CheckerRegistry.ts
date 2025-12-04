@@ -96,6 +96,34 @@ export class CheckerRegistry {
       console.error('❌ Failed to load PingChecker:', error);
     }
 
+    try {
+      const { CertificateChecker } = require('./checkers/CertificateChecker');
+      this.register(new CertificateChecker());
+    } catch (error) {
+      console.error('❌ Failed to load CertificateChecker:', error);
+    }
+
+    try {
+      const { GoogleCloudChecker } = require('./checkers/GoogleCloudChecker');
+      this.register(new GoogleCloudChecker());
+    } catch (error) {
+      console.error('❌ Failed to load GoogleCloudChecker:', error);
+    }
+
+    try {
+      const { AzureChecker } = require('./checkers/AzureChecker');
+      this.register(new AzureChecker());
+    } catch (error) {
+      console.error('❌ Failed to load AzureChecker:', error);
+    }
+
+    try {
+      const { DockerChecker } = require('./checkers/DockerChecker');
+      this.register(new DockerChecker());
+    } catch (error) {
+      console.error('❌ Failed to load DockerChecker:', error);
+    }
+
     // Add more checkers here as you create them
     // try {
     //   const { CustomChecker } = require('./checkers/CustomChecker');

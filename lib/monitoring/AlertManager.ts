@@ -421,7 +421,7 @@ export class AlertManager {
       if (notifications.length > 0) {
         await db.collection(Collections.ALERTS).updateOne(
           { _id: new ObjectId(alertId) },
-          { $push: { notifications_sent: { $each: notifications } } }
+          { $push: { notifications_sent: { $each: notifications } } } as any
         );
         console.log(`   ✅ Logged ${notifications.length} notification(s)`);
       }
@@ -485,7 +485,7 @@ export class AlertManager {
     if (notifications.length > 0) {
       await db.collection(Collections.ALERTS).updateOne(
         { _id: alert._id!.toString() },
-        { $push: { notifications_sent: { $each: notifications } } }
+        { $push: { notifications_sent: { $each: notifications } } } as any
       );
     }
   }

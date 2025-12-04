@@ -8,6 +8,7 @@ import { AwsChecker } from './AwsChecker';
 import { PingChecker } from './PingChecker';
 import { LogChecker } from './LogChecker';
 import { DockerChecker } from './DockerChecker';
+import { CertificateChecker } from './CertificateChecker';
 export function initializeCheckers(): void {
   console.log('🔧 Initializing monitoring checkers...');
 
@@ -18,9 +19,10 @@ export function initializeCheckers(): void {
   CheckerRegistry.register(new PingChecker());
   CheckerRegistry.register(new LogChecker());
   CheckerRegistry.register(new DockerChecker());
+  CheckerRegistry.register(new CertificateChecker());
   const registeredTypes = CheckerRegistry.getRegisteredTypes();
   console.log(`✅ Registered ${registeredTypes.length} checker(s): ${registeredTypes.join(', ')}`);
 }
 
-export { UrlChecker, ApiPostChecker, SshChecker, AwsChecker, PingChecker, LogChecker, DockerChecker };
+export { UrlChecker, ApiPostChecker, SshChecker, AwsChecker, PingChecker, LogChecker, DockerChecker, CertificateChecker };
 export { CheckerRegistry };

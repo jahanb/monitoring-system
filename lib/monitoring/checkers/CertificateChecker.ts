@@ -1,400 +1,306 @@
-// lib/monitoring/checkers/CertificateChecker.ts
+// lib/checkers/CertificateChecker.ts
 
 import { Monitor } from '@/lib/models/Monitor';
-import { IChecker, CheckResult, createErrorResult, determineStatus } from '../types';
-import { logger } from '@/lib/logger';
-import * as https from 'https';
 import * as tls from 'tls';
+import { getDatabase, Collections } from '@/lib/db/mongodb';
+import { IChecker, CheckResult } from '@/lib/monitoring/types';
 
-/**
- * CertificateChecker
- * Monitors SSL/TLS certificate expiration and validity
- * 
- * Features:
- * - Certificate expiration monitoring
- * - Configurable warning/alarm thresholds (days)
- * - Daily notifications for critical expiration periods
- * - Certificate chain validation
- * - Issuer information
- * - Subject Alternative Names (SANs) checking
- * - Self-signed certificate detection
- */
+interface CertificateInfo {
+    valid: boolean;
+    validFrom?: Date;
+    validTo?: Date;
+    daysUntilExpiry?: number;
+    issuer?: string;
+    subject?: string;
+    san?: string[];
+    error?: string;
+}
+
 export class CertificateChecker implements IChecker {
     readonly type = 'certificate';
 
-    async check(monitor: Monitor): Promise<CheckResult> {
-        const startTime = Date.now();
-
-        try {
-            const config = this.parseCertificateConfig(monitor);
-
-            if (!config.valid) {
-                return {
-                    success: false,
-                    value: null,
-                    status: 'error',
-                    message: config.error || 'Invalid certificate configuration',
-                    timestamp: new Date()
-                };
-            }
-
-            logger.info(`🔒 Checking certificate for: ${config.hostname}:${config.port}`);
-
-            // Get certificate information
-            const certInfo = await this.getCertificateInfo(config.hostname, config.port, config.timeout);
-            const responseTime = Date.now() - startTime;
-
-            // Calculate days until expiration
-            const daysRemaining = certInfo.daysRemaining;
-
-            // Determine status based on days remaining
-            let status: 'ok' | 'warning' | 'alarm' = 'ok';
-            let message = '';
-
-            if (daysRemaining < 0) {
-                // Certificate already expired
-                status = 'alarm';
-                message = `🚨 CERTIFICATE EXPIRED ${Math.abs(daysRemaining)} days ago!`;
-            } else if (daysRemaining <= (config.alarmThreshold || 7)) {
-                // Critical - within alarm threshold
-                status = 'alarm';
-                message = `🚨 Certificate expires in ${daysRemaining} day(s)! URGENT renewal required.`;
-            } else if (daysRemaining <= (config.warningThreshold || 30)) {
-                // Warning - within warning threshold
-                status = 'warning';
-                message = `⚠️ Certificate expires in ${daysRemaining} day(s). Plan renewal soon.`;
-            } else {
-                // All good
-                message = `✅ Certificate valid for ${daysRemaining} more day(s)`;
-            }
-
-            // Add warnings for other issues
-            const warnings: string[] = [];
-
-            if (certInfo.isSelfSigned) {
-                warnings.push('Self-signed certificate detected');
-            }
-
-            if (certInfo.hasExpiredInChain) {
-                warnings.push('Certificate chain contains expired certificates');
-            }
-
-            if (!certInfo.validHostname) {
-                warnings.push(`Hostname mismatch: Certificate is for ${certInfo.commonName}`);
-            }
-
-            return {
-                success: status !== 'alarm',
-                value: daysRemaining,
-                status,
-                message,
-                responseTime,
-                metadata: {
-                    daysRemaining: certInfo.daysRemaining,
-                    expiryDate: certInfo.expiryDate,
-                    issueDate: certInfo.issueDate,
-                    issuer: certInfo.issuer,
-                    subject: certInfo.subject,
-                    commonName: certInfo.commonName,
-                    subjectAltNames: certInfo.subjectAltNames,
-                    serialNumber: certInfo.serialNumber,
-                    signatureAlgorithm: certInfo.signatureAlgorithm,
-                    keySize: certInfo.keySize,
-                    isSelfSigned: certInfo.isSelfSigned,
-                    validHostname: certInfo.validHostname,
-                    hasExpiredInChain: certInfo.hasExpiredInChain,
-                    warnings: warnings.length > 0 ? warnings : undefined,
-                    checkTimestamp: new Date(),
-                    thresholds: {
-                        warning: config.warningThreshold,
-                        alarm: config.alarmThreshold
-                    }
-                },
-                timestamp: new Date()
-            };
-
-        } catch (error: any) {
-            logger.error('❌ Certificate Check Failed:', error);
-            return createErrorResult(error, Date.now() - startTime);
-        }
-    }
-
     validate(monitor: Monitor): boolean | string {
-        const cert = (monitor as any).certificate_config;
-
-        if (!cert) {
-            return 'Certificate configuration is required';
+        if (monitor.monitor_type !== 'certificate') {
+            return 'Monitor type must be certificate';
         }
-
-        if (!cert.hostname) {
-            return 'Hostname is required';
+        if (!monitor.certificate_config) {
+            return 'Certificate configuration is missing';
         }
-
-        // Validate hostname format
-        const hostnameRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-        if (!hostnameRegex.test(cert.hostname)) {
-            return 'Invalid hostname format';
+        if (!monitor.certificate_config.hostname) {
+            return 'Hostname is required in certificate configuration';
         }
-
-        const port = cert.port || 443;
-        if (port < 1 || port > 65535) {
-            return 'Port must be between 1 and 65535';
-        }
-
-        if (cert.alarm_threshold_days !== undefined && cert.alarm_threshold_days < 0) {
-            return 'Alarm threshold must be a positive number';
-        }
-
-        if (cert.warning_threshold_days !== undefined && cert.warning_threshold_days < 0) {
-            return 'Warning threshold must be a positive number';
-        }
-
         return true;
     }
 
-    /**
-     * Parse certificate configuration from monitor
-     */
-    private parseCertificateConfig(monitor: Monitor) {
-        const cert = (monitor as any).certificate_config;
+    async check(monitor: Monitor): Promise<CheckResult> {
+        const startTime = Date.now();
+        const config = monitor.certificate_config;
 
-        if (!cert) {
+        if (!config?.hostname) {
             return {
-                valid: false,
-                error: 'Certificate config missing',
-                hostname: '',
-                port: 443,
-                timeout: 30,
-                warningThreshold: 30,
-                alarmThreshold: 7
+                success: false,
+                message: 'Certificate configuration missing',
+                value: 0,
+                status: 'error',
+                responseTime: Date.now() - startTime,
+                statusCode: 500,
+                timestamp: new Date(),
+                metadata: { error: 'hostname is required' }
             };
         }
 
-        return {
-            valid: true,
-            hostname: cert.hostname,
-            port: cert.port || 443,
-            timeout: cert.timeout || 30,
-            warningThreshold: cert.warning_threshold_days || 30,
-            alarmThreshold: cert.alarm_threshold_days || 7,
-            checkChain: cert.check_chain !== false // Default true
-        };
+        try {
+            console.log(`🔒 Checking certificate for ${config.hostname}:${config.port || 443}`);
+
+            // Get certificate information
+            const certInfo = await this.getCertificateInfo(
+                config.hostname,
+                config.port || 443,
+                config.timeout || 30
+            );
+
+            if (!certInfo.valid) {
+                return {
+                    success: false,
+                    message: certInfo.error || 'Certificate check failed',
+                    value: 0,
+                    status: 'error',
+                    responseTime: Date.now() - startTime,
+                    statusCode: 500,
+                    timestamp: new Date(),
+                    metadata: { error: certInfo.error }
+                };
+            }
+
+            const daysUntilExpiry = certInfo.daysUntilExpiry!;
+
+            // FIX: Ensure thresholds are numbers and handle 0 correctly
+            const warningThreshold = Number(config.warning_threshold_days ?? 30);
+            const alarmThreshold = Number(config.alarm_threshold_days ?? 7);
+
+            console.log(`   📊 Expiry: ${daysUntilExpiry} days`);
+            console.log(`   ⚠️  Warning Threshold: ${warningThreshold} days`);
+            console.log(`   🚨 Alarm Threshold: ${alarmThreshold} days`);
+
+            let success = true;
+            let message = '';
+            let status: 'ok' | 'warning' | 'alarm' = 'ok';
+            let severity: 'low' | 'medium' | 'high' | 'critical' = 'low';
+
+            // Determine alert level
+            if (daysUntilExpiry < 0) {
+                success = false;
+                status = 'alarm';
+                severity = 'critical';
+                message = `🚨 CRITICAL: Certificate EXPIRED ${Math.abs(daysUntilExpiry)} days ago!`;
+            } else if (daysUntilExpiry <= alarmThreshold) {
+                success = false;
+                status = 'alarm';
+                severity = 'critical';
+                message = `🔴 ALARM: Certificate expires in ${daysUntilExpiry} days (threshold: ${alarmThreshold})`;
+            } else if (daysUntilExpiry <= warningThreshold) {
+                success = false;
+                status = 'warning';
+                severity = 'high';
+                message = `🟡 WARNING: Certificate expires in ${daysUntilExpiry} days (threshold: ${warningThreshold})`;
+            } else {
+                success = true;
+                message = `✅ Certificate valid - expires in ${daysUntilExpiry} days`;
+            }
+
+            // NOTE: Daily reminder logic removed from here as it should be handled by AlertManager
+            // to avoid duplicate notifications and ensure consistency.
+            const shouldNotify = status === 'alarm' || status === 'warning';
+
+            return {
+                success,
+                message,
+                value: daysUntilExpiry,
+                status,
+                responseTime: Date.now() - startTime,
+                statusCode: success ? 200 : 500,
+                timestamp: new Date(),
+                metadata: {
+                    hostname: config.hostname,
+                    port: config.port || 443,
+                    days_until_expiry: daysUntilExpiry,
+                    valid_from: certInfo.validFrom,
+                    valid_to: certInfo.validTo,
+                    issuer: certInfo.issuer,
+                    subject: certInfo.subject,
+                    san: certInfo.san,
+                    severity: severity,
+                    should_notify: shouldNotify,
+                    warning_threshold: warningThreshold,
+                    alarm_threshold: alarmThreshold,
+                },
+            };
+        } catch (error: any) {
+            console.error('   ❌ Certificate check error:', error);
+            return {
+                success: false,
+                message: `Certificate check error: ${error.message}`,
+                value: 0,
+                status: 'error',
+                responseTime: Date.now() - startTime,
+                statusCode: 500,
+                timestamp: new Date(),
+                metadata: { error: error.message }
+            };
+        }
     }
 
     /**
-     * Get certificate information from server
+     * Get certificate information from hostname
      */
     private async getCertificateInfo(
         hostname: string,
-        port: number,
-        timeoutSeconds: number
-    ): Promise<{
-        daysRemaining: number;
-        expiryDate: Date;
-        issueDate: Date;
-        issuer: string;
-        subject: string;
-        commonName: string;
-        subjectAltNames: string[];
-        serialNumber: string;
-        signatureAlgorithm: string;
-        keySize: number | null;
-        isSelfSigned: boolean;
-        validHostname: boolean;
-        hasExpiredInChain: boolean;
-    }> {
-        return new Promise((resolve, reject) => {
-            const options: tls.ConnectionOptions = {
+        port: number = 443,
+        timeout: number = 30
+    ): Promise<CertificateInfo> {
+        return new Promise((resolve) => {
+            const options = {
                 host: hostname,
                 port: port,
-                servername: hostname, // For SNI (Server Name Indication)
-                rejectUnauthorized: false, // We want to check even invalid certs
-                timeout: timeoutSeconds * 1000
+                servername: hostname,
+                rejectUnauthorized: false,
             };
 
-            const socket = tls.connect(options, () => {
+            const timeoutId = setTimeout(() => {
                 try {
-                    const cert = socket.getPeerCertificate(true); // true = include certificate chain
+                    socket.destroy();
+                } catch (e) {
+                    // Ignore error if socket already destroyed
+                }
+                resolve({
+                    valid: false,
+                    error: `Connection timeout after ${timeout} seconds`,
+                });
+            }, timeout * 1000);
+
+            const socket = tls.connect(options, () => {
+                clearTimeout(timeoutId);
+
+                try {
+                    const cert = socket.getPeerCertificate();
 
                     if (!cert || Object.keys(cert).length === 0) {
                         socket.destroy();
-                        reject(new Error('No certificate received from server'));
-                        return;
+                        return resolve({
+                            valid: false,
+                            error: 'No certificate found',
+                        });
                     }
 
-                    // Parse certificate details
-                    const expiryDate = new Date(cert.valid_to);
-                    const issueDate = new Date(cert.valid_from);
+                    const validFrom = new Date(cert.valid_from);
+                    const validTo = new Date(cert.valid_to);
                     const now = new Date();
 
-                    // Calculate days remaining
-                    const daysRemaining = Math.floor(
-                        (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+                    const daysUntilExpiry = Math.floor(
+                        (validTo.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
                     );
 
-                    // Extract issuer information
-                    const issuer = this.formatCertificateSubject(cert.issuer);
-                    const subject = this.formatCertificateSubject(cert.subject);
-                    const commonName = cert.subject?.CN || hostname;
-
-                    // Get Subject Alternative Names (SANs)
-                    const subjectAltNames = this.extractSANs(cert);
-
-                    // Check if certificate is self-signed
-                    const isSelfSigned = issuer === subject;
-
-                    // Validate hostname against certificate
-                    const validHostname = this.validateHostname(hostname, commonName, subjectAltNames);
-
-                    // Check certificate chain for expired certificates
-                    const hasExpiredInChain = this.checkCertificateChain(cert);
-
-                    // Get key information
-                    const keySize = this.extractKeySize(cert);
+                    const san = cert.subjectaltname
+                        ? cert.subjectaltname.split(', ').map((s: string) => s.replace('DNS:', ''))
+                        : [];
 
                     socket.destroy();
 
                     resolve({
-                        daysRemaining,
-                        expiryDate,
-                        issueDate,
-                        issuer,
-                        subject,
-                        commonName,
-                        subjectAltNames,
-                        serialNumber: cert.serialNumber || 'Unknown',
-                        signatureAlgorithm: cert.sigAlg || 'Unknown',
-                        keySize,
-                        isSelfSigned,
-                        validHostname,
-                        hasExpiredInChain
+                        valid: true,
+                        validFrom,
+                        validTo,
+                        daysUntilExpiry,
+                        issuer: cert.issuer?.O || cert.issuer?.CN || 'Unknown',
+                        subject: cert.subject?.CN || hostname,
+                        san,
                     });
-
                 } catch (error: any) {
                     socket.destroy();
-                    reject(error);
+                    resolve({
+                        valid: false,
+                        error: `Failed to parse certificate: ${error.message}`,
+                    });
                 }
             });
 
-            socket.on('error', (error) => {
-                reject(new Error(`TLS connection failed: ${error.message}`));
-            });
-
-            socket.on('timeout', () => {
-                socket.destroy();
-                reject(new Error(`Connection timeout after ${timeoutSeconds}s`));
+            socket.on('error', (error: any) => {
+                clearTimeout(timeoutId);
+                resolve({
+                    valid: false,
+                    error: `Connection error: ${error.message}`,
+                });
             });
         });
     }
 
     /**
-     * Format certificate subject/issuer for display
+     * Check if we should send daily reminder
      */
-    private formatCertificateSubject(subject: any): string {
-        if (!subject) return 'Unknown';
-
-        const parts: string[] = [];
-
-        if (subject.CN) parts.push(`CN=${subject.CN}`);
-        if (subject.O) parts.push(`O=${subject.O}`);
-        if (subject.OU) parts.push(`OU=${subject.OU}`);
-        if (subject.C) parts.push(`C=${subject.C}`);
-
-        return parts.join(', ') || 'Unknown';
-    }
-
-    /**
-     * Extract Subject Alternative Names from certificate
-     */
-    private extractSANs(cert: any): string[] {
-        if (!cert.subjectaltname) return [];
-
-        return cert.subjectaltname
-            .split(',')
-            .map((san: string) => san.trim().replace(/^DNS:/, ''))
-            .filter((san: string) => san.length > 0);
-    }
-
-    /**
-     * Validate if hostname matches certificate
-     */
-    private validateHostname(hostname: string, commonName: string, sans: string[]): boolean {
-        // Check exact match with CN
-        if (hostname === commonName) return true;
-
-        // Check against SANs
-        for (const san of sans) {
-            if (this.matchesHostname(hostname, san)) {
+    private async shouldSendDailyReminder(
+        monitor: Monitor,
+        alertType: 'warning' | 'alarm'
+    ): Promise<boolean> {
+        try {
+            const alertSettings = (monitor as any).alert_settings;
+            if (!alertSettings?.send_daily_reminder) {
+                console.log('   ℹ️ Daily reminders disabled');
                 return true;
             }
-        }
 
-        // Check if CN is a wildcard that matches
-        if (this.matchesHostname(hostname, commonName)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Check if hostname matches pattern (supports wildcards)
-     */
-    private matchesHostname(hostname: string, pattern: string): boolean {
-        if (hostname === pattern) return true;
-
-        // Handle wildcard certificates (*.example.com)
-        if (pattern.startsWith('*.')) {
-            const domain = pattern.substring(2);
-            const hostParts = hostname.split('.');
-
-            // *.example.com matches sub.example.com but not example.com
-            if (hostParts.length > 1) {
-                const hostDomain = hostParts.slice(1).join('.');
-                return hostDomain === domain;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Check certificate chain for expired certificates
-     */
-    private checkCertificateChain(cert: any): boolean {
-        const now = new Date();
-
-        // Check current certificate
-        if (new Date(cert.valid_to) < now) {
-            return true;
-        }
-
-        // Check issuer certificate if available
-        if (cert.issuerCertificate && cert.issuerCertificate !== cert) {
-            return this.checkCertificateChain(cert.issuerCertificate);
-        }
-
-        return false;
-    }
-
-    /**
-     * Extract key size from certificate
-     */
-    private extractKeySize(cert: any): number | null {
-        try {
-            // Try to get key size from public key info
-            if (cert.pubkey && cert.pubkey.length) {
-                return cert.pubkey.length * 8; // Convert bytes to bits
+            if (alertType !== 'alarm') {
+                console.log('   ℹ️ Daily reminder only for alarms');
+                return true;
             }
 
-            // Alternative: parse from modulus length (RSA)
-            if (cert.modulus) {
-                return cert.modulus.length * 4; // Hex string, 4 bits per char
+            const db = await getDatabase();
+
+            const recentAlert = await db.collection(Collections.ALERTS)
+                .findOne(
+                    {
+                        monitor_id: monitor._id?.toString(),
+                        status: { $in: ['active', 'acknowledged'] },
+                        severity: { $in: ['alarm', 'critical'] }
+                    },
+                    { sort: { triggered_at: -1 } }
+                );
+
+            if (!recentAlert) {
+                console.log('   ✅ No existing alert found');
+                return true;
             }
+
+            const lastNotificationAt = recentAlert.last_notification_at
+                ? new Date(recentAlert.last_notification_at)
+                : new Date(recentAlert.triggered_at);
+
+            const hoursSinceLastNotification =
+                (Date.now() - lastNotificationAt.getTime()) / (1000 * 60 * 60);
+
+            console.log(`   ⏰ Hours since last notification: ${hoursSinceLastNotification.toFixed(1)}`);
+
+            if (hoursSinceLastNotification >= 20) {
+                console.log('   ✅ Sending daily reminder (>20 hours)');
+
+                await db.collection(Collections.ALERTS).updateOne(
+                    { _id: recentAlert._id },
+                    {
+                        $set: {
+                            last_notification_at: new Date(),
+                            last_updated: new Date()
+                        }
+                    }
+                );
+
+                return true;
+            }
+
+            console.log('   ⏭️ Skipping (too soon)');
+            return false;
+
         } catch (error) {
-            logger.debug('Could not extract key size:', error);
+            console.error('   ❌ Error checking daily reminder:', error);
+            return true;
         }
-
-        return null;
     }
 }

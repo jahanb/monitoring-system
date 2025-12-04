@@ -1,9 +1,9 @@
 
 ## Getting Started
 
+```bash
 First, run the development server:
 npm install
-```bash
 npm run dev
 # or
 yarn dev
@@ -11,9 +11,10 @@ yarn dev
 pnpm dev
 # or
 bun dev
-```
 Then , run the scheduler server:
-npm run scheduler 
+npm run scheduler  or start scheduler from UI (Dashboard )
+
+```
 
 Open [http://localhost:3010/systemup] with your browser to see the result.
 
@@ -26,7 +27,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 
 Your Complete Monitoring System Now Has:
-✅ 5 Checkers Working:
+✅ 10 Checkers Working:
 
 URL/API GET
 Rest API POST
@@ -61,6 +62,32 @@ Scheduled execution via your script
 Only runs monitors when due
 Stores metrics and history
 
+
+🟡 Warning: Website slow → Email only
+🔴 Alarm: Website down → Email + SMS + Call
+
+Channels Available:
+
+📧 Email
+📱 SMS
+📞 Phone Call
+💬 Slack
+🔗 Webhook
+
+┌─────────────────────────────────────────┐
+│ 🔔 Default Notification Channels       │
+├─────────────────────────────────────────┤
+│ Warning Channels: [📧 Email]           │
+│ Alarm Channels:   [📧 Email] [📱 SMS]  │
+└─────────────────────────────────────────┘
+Per-Contact Preferences:
+┌──────────────────────────────────────────┐
+│ Name: John Doe                     [×]   │
+│ 📧 john@example.com  📱 +1234567890     │
+│                                          │
+│ 🟡 Warning: [📧 Email]                  │
+│ 🔴 Alarm: [📧 Email] [📱 SMS] [📞 Call]│
+└──────────────────────────────────────────┘
 🚀 Next Steps (Optional Enhancements):
 
 Email Notifications - Integrate SendGrid/AWS SES for actual emails

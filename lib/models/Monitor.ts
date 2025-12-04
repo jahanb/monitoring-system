@@ -20,6 +20,13 @@ export interface Monitor {
   log_config?: LogConfig;
   alert_settings?: AlertSettings;
 
+  notification_settings?: {
+    warning_channels: ('email' | 'sms' | 'call' | 'slack' | 'webhook')[];
+    alarm_channels: ('email' | 'sms' | 'call' | 'slack' | 'webhook')[];
+    enable_escalation?: boolean;  // Escalate from warning to alarm channels
+    escalation_delay_minutes?: number;  // Wait X minutes before escalating
+  };
+
   // Pattern matching for URL/response monitoring
   negative_pattern?: string;  // Pattern that should NOT appear
   positive_pattern?: string;  // Pattern that SHOULD appear
@@ -101,6 +108,18 @@ export interface Monitor {
   last_status?: 'ok' | 'warning' | 'alarm';
   updated_at?: Date;
 }
+
+alarming_candidate: Array<string | {
+  name: string;
+  email: string;
+  mobile?: string;
+  role?: string;
+  // NEW: Notification preferences
+  notification_preferences?: {
+    warning: ('email' | 'sms' | 'call' | 'slack' | 'webhook')[];  // For warnings
+    alarm: ('email' | 'sms' | 'call' | 'slack' | 'webhook')[];    // For alarms
+  };
+}>;
 
 export interface AlarmingContact {
   name: string;
