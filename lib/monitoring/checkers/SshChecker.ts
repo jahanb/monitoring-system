@@ -20,7 +20,7 @@ export class SshChecker implements IChecker {
     try {
       // Parse SSH configuration from monitor
       const sshConfig = this.parseSshConfig(monitor);
-      
+
       if (!sshConfig.valid) {
         return {
           success: false,
@@ -39,6 +39,7 @@ export class SshChecker implements IChecker {
         sshConfig.port,
         sshConfig.username,
         sshConfig.password,
+        sshConfig.privateKey,
         sshConfig.command,
         monitor.timeout_in_second || 30
       );
@@ -79,7 +80,7 @@ export class SshChecker implements IChecker {
 
       // Determine status based on parsed value or response time
       const primaryValue = metrics.cpu || metrics.memory || metrics.disk || responseTime;
-      
+
       const status = determineStatus(primaryValue, {
         lowWarning: monitor.low_value_threshold_warning,
         highWarning: monitor.high_value_threshold_warning,
@@ -113,7 +114,7 @@ export class SshChecker implements IChecker {
 
   validate(monitor: Monitor): boolean | string {
     const ssh = (monitor as any).ssh_config;
-    
+
     if (!ssh) {
       return 'SSH configuration is required';
     }
@@ -191,7 +192,8 @@ export class SshChecker implements IChecker {
     host: string,
     port: number,
     username: string,
-    password: string,
+    password: string | undefined,
+    privateKey: string | undefined,
     command: string,
     timeoutSeconds: number
   ): Promise<string> {
@@ -221,7 +223,7 @@ export class SshChecker implements IChecker {
           stream.on('close', (code: number, signal: any) => {
             clearTimeout(timeoutHandle);
             conn.end();
-            
+
             if (code !== 0) {
               reject(new Error(`Command exited with code ${code}: ${errorOutput}`));
             } else {
@@ -250,6 +252,7 @@ export class SshChecker implements IChecker {
         port,
         username,
         password,
+        privateKey,
         readyTimeout: timeoutSeconds * 1000
       });
     });

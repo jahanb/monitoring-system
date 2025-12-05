@@ -1,10 +1,12 @@
 // lib/monitoring/StateManager.ts
 
 import { Monitor } from '@/lib/models/Monitor';
-import { MonitorState, Alert } from '@/lib/models/TimeSeries';
+import { MonitorState } from '@/lib/models/MonitorState';
+import { Alert } from '@/lib/models/Alert';
 import { getDatabase, Collections } from '@/lib/db/mongodb';
 import { CheckResult } from './types';
 import { CheckerRegistry } from './types';
+import { ObjectId } from 'mongodb';
 
 export class StateManager {
   async updateState(monitor: Monitor, result: CheckResult): Promise<void> {
@@ -92,13 +94,13 @@ export class StateManager {
 
   private async upgradeAlert(alertId: string, newSeverity: 'alarm'): Promise<void> {
     const db = await getDatabase();
-    await db.collection(Collections.ALERTS).updateOne({ _id: alertId }, { $set: { severity: newSeverity, message: `Alert upgraded to ${newSeverity}` } });
+    await db.collection(Collections.ALERTS).updateOne({ _id: new ObjectId(alertId) }, { $set: { severity: newSeverity, message: `Alert upgraded to ${newSeverity}` } });
     console.log(`⬆️ Upgraded alert ${alertId} to ${newSeverity}`);
   }
 
   private async recoverAlert(alertId: string): Promise<void> {
     const db = await getDatabase();
-    await db.collection(Collections.ALERTS).updateOne({ _id: alertId }, { $set: { status: 'recovered', recovered_at: new Date() } });
+    await db.collection(Collections.ALERTS).updateOne({ _id: new ObjectId(alertId) }, { $set: { status: 'recovered', recovered_at: new Date() } });
     console.log(`✅ Recovered alert ${alertId}`);
   }
 
